@@ -5,7 +5,7 @@ import { Edit3Icon, GripHorizontalIcon, TrashIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import Link from 'next/link'
 import { useSortable } from '@dnd-kit/react/sortable'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import EditBoard from './EditBoard'
 import DeleteBoard from './DeleteBoard'
 
