@@ -36,7 +36,7 @@ export default function EditItem({ data, open, onOpenChange }: { data: Item; ope
                     {isDelete ? (
                       <DeleteItem data={data} open={isDelete} onOpenChange={setIsDelete} />
                     ) : (
-                      <Button variant="ghost" size="icon" onClick={() => setIsDelete(true)}>
+                      <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setIsDelete(true)}>
                         <TrashIcon />
                       </Button>
                     )}

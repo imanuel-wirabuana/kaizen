@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { index, reindex, update } from '@/lib/services'
 import { move } from '@dnd-kit/helpers'
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
+import { PlusIcon } from 'lucide-react'
 import { startTransition, useEffect, useState } from 'react'
 
 export default function Page() {
@@ -18,9 +19,9 @@ export default function Page() {
   }, [])
 
   return (
-    <section className="px-8 py-4 mx-auto">
+    <section className="px-6 py-3 mx-auto">
       <nav className="flex justify-between items-center gap-4 mb-4">
-        <h1>Board List</h1>
+        <h1>Your Boards</h1>
       </nav>
 
       <DragDropProvider
@@ -49,7 +50,8 @@ export default function Page() {
           {isCreate ? (
             <CreateBoard open={isCreate} onOpenChange={(open) => setIsCreate(open)} />
           ) : (
-            <Button variant="ghost" size="lg" className="w-full h-11 text-muted-foreground" onClick={() => setIsCreate(true)}>
+            <Button variant="ghost" size="lg" className="w-full h-11 text-muted-foreground cursor-pointer" onClick={() => setIsCreate(true)}>
+              <PlusIcon />
               Create new board
             </Button>
           )}

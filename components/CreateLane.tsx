@@ -24,16 +24,16 @@ export default function CreateLane({ boardId, open, onOpenChange }: { boardId: s
   }
 
   return (
-    <Card size="sm" className="w-3xs h-fit">
+    <Card size="sm" className="min-w-3xs h-fit">
       <CardContent>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter lane title..." autoFocus onBlur={() => setTimeout(() => onOpenChange(false), 200)} onKeyDown={onEnter} />
       </CardContent>
       <CardFooter>
         <div className="flex items-center gap-1">
-          <Button size="sm" onClick={handleClick}>
+          <Button size="sm" onClick={handleClick} className="cursor-pointer">
             Create lane
           </Button>
-          <Button size="icon-sm" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button size="icon-sm" variant="ghost" className="cursor-pointer" onClick={() => onOpenChange(false)}>
             <XIcon />
           </Button>
         </div>

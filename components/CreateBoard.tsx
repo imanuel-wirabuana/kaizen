@@ -30,10 +30,10 @@ export default function CreateBoard({ open, onOpenChange }: { open: boolean; onO
       </CardContent>
       <CardFooter>
         <div className="flex items-center gap-1">
-          <Button size="sm" onClick={handleClick}>
+          <Button size="sm" onClick={handleClick} className="cursor-pointer">
             Create board
           </Button>
-          <Button size="icon-sm" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button size="icon-sm" variant="ghost" className="cursor-pointer" onClick={() => onOpenChange(false)}>
             <XIcon />
           </Button>
         </div>

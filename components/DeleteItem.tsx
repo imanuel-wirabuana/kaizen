@@ -15,7 +15,7 @@ export default function DeleteItem({ data, open, onOpenChange }: { data: Item; o
   return (
     <div className="space-y-3">
       <h1>
-        Are you sure want to delete lane <b>{data.title}</b>?
+        Are you sure want to delete item <b>{data.title}</b>?
       </h1>
 
       <div className="flex gap-1 items-center">

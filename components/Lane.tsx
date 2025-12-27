@@ -32,7 +32,7 @@ export default function Lane({ data, index, items }: { data: Lane; index: number
   })
 
   return (
-    <Card size="sm" className={`w-3xs h-fit group/outer ${isDragging && 'opacity-60'}`} ref={ref}>
+    <Card size="sm" className={`min-w-3xs max-w-3xs h-fit group/outer ${isDragging && 'opacity-60'}`} ref={ref}>
       <CardHeader>
         <CardTitle className="cursor-pointer">
           {isEdit ? (
@@ -63,7 +63,7 @@ export default function Lane({ data, index, items }: { data: Lane; index: number
       </CardHeader>
       <Separator />
       <CardContent className="group">
-        <div data-scroll className="space-y-3 overflow-y-auto h-fit max-h-[calc(100vh-50vh)]">
+        <div data-scroll className="space-y-3 overflow-y-auto h-fit max-h-[calc(100vh-40vh)]">
           {items.map((item, index) => (
             <Item data={item} index={index} group={id} key={item.id} />
           ))}
@@ -71,7 +71,7 @@ export default function Lane({ data, index, items }: { data: Lane; index: number
           {isCreate ? (
             <CreateItem boardId={data.boardId} laneId={id} open={isCreate} onOpenChange={setIsCreate} />
           ) : (
-            <Button variant="ghost" size="lg" className="w-full text-muted-foreground" onClick={() => setIsCreate(true)}>
+            <Button variant="ghost" size="lg" className="w-full text-muted-foreground cursor-pointer" onClick={() => setIsCreate(true)}>
               <PlusIcon /> Create new item
             </Button>
           )}

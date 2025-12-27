@@ -4,11 +4,13 @@ import CreateLane from '@/components/CreateLane'
 import Item from '@/components/Item'
 import Lane from '@/components/Lane'
 import { Button } from '@/components/ui/button'
-import { index, reindex, reindexItems, show } from '@/lib/services'
+import { Input } from '@/components/ui/input'
+import { index, reindex, reindexItems, show, update } from '@/lib/services'
 import { reorderLaneItems } from '@/lib/utils'
 import { move } from '@dnd-kit/helpers'
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { where } from 'firebase/firestore'
+import { PlusIcon } from 'lucide-react'
 import { startTransition, use, useEffect, useState } from 'react'
 
 export default function Page({ params }: { params: Promise<{ boardId: string }> }) {
@@ -17,19 +19,39 @@ export default function Page({ params }: { params: Promise<{ boardId: string }> 
   const [board, setBoard] = useState<Board | null>(null)
   const [lanes, setLanes] = useState<Lane[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [title, setTitle] = useState<string>('')
 
+  const [isEdit, setIsEdit] = useState<boolean>(false)
   const [isCreate, setIsCreate] = useState<boolean>(false)
 
   useEffect(() => {
     index<Lane>('lanes', (lanes) => setLanes(lanes), { where: where('boardId', '==', boardId) })
     index<Item>('items', (items) => setItems(items), { where: where('boardId', '==', boardId) })
     show<Board>('boards', boardId, (data) => setBoard(data))
-  }, [])
+  }, [boardId])
+
+  useEffect(() => {
+    if (!board) return
+    setTitle(board.title)
+  }, [board])
+
+  const handleOnKeyEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      update<Board>('boards', boardId, { title })
+      setIsEdit(false)
+    }
+  }
 
   return (
-    <section className="h-[calc(100vh-9px)] py-4">
-      <nav className="flex justify-between items-center px-8">
-        <h1>{board?.title}</h1>
+    <section className="h-[calc(100vh-10vh)] py-3 ">
+      <nav className="flex justify-between items-center px-6">
+        {isEdit ? (
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="w-fit" autoFocus onBlur={() => setIsEdit(false)} onKeyDown={handleOnKeyEnter} />
+        ) : (
+          <Button variant="ghost" size="lg" className="text-lg cursor-pointer" onClick={() => setIsEdit(true)}>
+            {board?.title}
+          </Button>
+        )}
       </nav>
       <DragDropProvider
         onDragOver={(event) => {
@@ -101,16 +123,16 @@ export default function Page({ params }: { params: Promise<{ boardId: string }> 
           })
         }}
       >
-        <div className="flex gap-4 overflow-x-auto py-4 h-full px-8">
+        <div className="flex gap-4 overflow-x-auto py-3 h-full px-6">
           {lanes.map((lane, index) => (
             <Lane data={lane} index={index} items={items.filter((item) => item.laneId === lane.id)} key={lane.id} />
           ))}
           {isCreate ? (
             <CreateLane boardId={boardId} open={isCreate} onOpenChange={setIsCreate} />
           ) : (
-            <div className="w-3xs">
-              <Button variant="ghost" className="w-full h-11 text-muted-foreground" onClick={() => setIsCreate(true)}>
-                Create new lane
+            <div className="min-w-3xs">
+              <Button variant="ghost" className="w-full h-11 text-muted-foreground cursor-pointer" onClick={() => setIsCreate(true)}>
+                <PlusIcon /> Create new lane
               </Button>
             </div>
           )}

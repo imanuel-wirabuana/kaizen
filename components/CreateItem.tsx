@@ -28,10 +28,10 @@ export default function CreateItem({ boardId, laneId, open, onOpenChange }: { bo
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter item title..." autoFocus onBlur={() => setTimeout(() => onOpenChange(false), 200)} onKeyDown={onEnter} />
 
       <div className="flex items-center gap-1">
-        <Button size="sm" onClick={handleClick}>
+        <Button size="sm" onClick={handleClick} className="cursor-pointer">
           Create item
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={() => onOpenChange(false)}>
+        <Button size="icon-sm" variant="ghost" className="cursor-pointer" onClick={() => onOpenChange(false)}>
           <XIcon />
         </Button>
       </div>
