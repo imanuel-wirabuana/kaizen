@@ -6,7 +6,7 @@ import Lane from '@/components/Lane'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { index, reindex, reindexItems, show, update } from '@/lib/services'
-import { reorderLaneItems } from '@/lib/utils'
+import { cn, isImageUrl, reorderLaneItems } from '@/lib/utils'
 import { move } from '@dnd-kit/helpers'
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { where } from 'firebase/firestore'
@@ -42,9 +42,24 @@ export default function Page({ params }: { params: Promise<{ boardId: string }> 
     }
   }
 
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Ignore wheel events coming from children
+    if (e.target !== e.currentTarget) return
+
+    // Convert vertical wheel → horizontal scroll
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.currentTarget.scrollLeft += e.deltaY * 0.5
+    }
+  }
+
   return (
-    <section className="h-[calc(100vh-10vh)] py-3 ">
-      <nav className="flex justify-between items-center px-6">
+    <section
+      className={cn('flex flex-col h-[calc(100vh-44px)] relative bg-cover bg-center', !isImageUrl(String(board?.background)) && board?.background)}
+      style={isImageUrl(String(board?.background)) ? { backgroundImage: `url(${board?.background})` } : undefined}
+    >
+      {isImageUrl(String(board?.background)) && <div className="pointer-events-none absolute top-0 right-0 bottom-0 left-0 bg-black/50 z-0" />}
+
+      <nav className="relative z-10 shrink-0 flex justify-between items-center h-10 px-6 py-1.5 bg-black/50">
         {isEdit ? (
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="w-fit" autoFocus onBlur={() => setIsEdit(false)} onKeyDown={handleOnKeyEnter} />
         ) : (
@@ -123,19 +138,21 @@ export default function Page({ params }: { params: Promise<{ boardId: string }> 
           })
         }}
       >
-        <div className="flex gap-4 overflow-x-auto py-3 h-full px-6">
-          {lanes.map((lane, index) => (
-            <Lane data={lane} index={index} items={items.filter((item) => item.laneId === lane.id)} key={lane.id} />
-          ))}
-          {isCreate ? (
-            <CreateLane boardId={boardId} open={isCreate} onOpenChange={setIsCreate} />
-          ) : (
-            <div className="min-w-3xs">
-              <Button variant="ghost" className="w-full h-11 text-muted-foreground cursor-pointer" onClick={() => setIsCreate(true)}>
-                <PlusIcon /> Create new lane
-              </Button>
-            </div>
-          )}
+        <div onWheel={handleWheel} className="relative z-10 flex-1 min-h-0 overflow-x-auto overflow-y-hidden [scrollbar-width:thin]">
+          <div className="flex gap-4 py-3 min-w-max px-3 ">
+            {lanes.map((lane, index) => (
+              <Lane data={lane} index={index} items={items.filter((item) => item.laneId === lane.id)} key={lane.id} />
+            ))}
+            {isCreate ? (
+              <CreateLane boardId={boardId} open={isCreate} onOpenChange={setIsCreate} />
+            ) : (
+              <div className="min-w-3xs">
+                <Button variant="ghost" className="w-full h-11 bg-black/20 text-muted-foreground cursor-pointer" onClick={() => setIsCreate(true)}>
+                  <PlusIcon /> Create new lane
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
         <DragOverlay>
           {({ data, type }) =>

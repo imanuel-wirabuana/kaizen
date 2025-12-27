@@ -56,7 +56,7 @@ export default function Page() {
             </Button>
           )}
         </div>
-        <DragOverlay>{({ data }) => <Board data={{ id: data.id, title: data.title, createdAt: data.createdAt, order: data.order }} index={0} />}</DragOverlay>
+        <DragOverlay>{({ data }) => <Board data={{ id: data.id, title: data.title, createdAt: data.createdAt, order: data.order, background: data.background }} index={0} />}</DragOverlay>
       </DragDropProvider>
     </section>
   )

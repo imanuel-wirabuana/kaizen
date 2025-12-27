@@ -3,6 +3,7 @@ type Board = {
   id: string
   title: string
   order: number
+  background?: string
   createdAt?: number
   updatedAt?: number
 }
@@ -12,6 +13,7 @@ type Lane = {
   id: string
   title: string
   order: number
+  background?: string
   createdAt?: number
   updatedAt?: number
 
