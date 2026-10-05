@@ -1,0 +1,210 @@
+import { useState, type ReactNode } from "react"
+import { Link, useRoute } from "wouter"
+import { NavUser } from "@/components/layout/nav-user"
+import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
+import { WorkspaceCommandDialog } from "@/features/workspaces/components/workspace-command-dialog"
+import { CreateWorkspaceDialog } from "@/features/workspaces/components/create-workspace-dialog"
+import { WorkspaceEmptyState } from "@/features/workspaces/components/workspace-empty-state"
+import {
+  BotMessageSquare,
+  Calendar,
+  Home,
+  Inbox,
+  Info,
+  KanbanSquare,
+  Loader2,
+  Plus,
+  Search,
+  Settings,
+  Users,
+} from "lucide-react"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+} from "@/components/ui/sidebar"
+
+interface NavItemProps {
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+}
+
+function SidebarNavItem({ href, icon: Icon, title }: NavItemProps) {
+  const [isActive] = useRoute(href)
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        render={<Link href={href} />}
+        isActive={isActive}
+        tooltip={title}
+      >
+        <Icon className="size-4" />
+        <span>{title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+export function RootLayout({ children }: { children: ReactNode }) {
+  const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
+  const { workspaces, activeWorkspace, isLoading } = useWorkspaces()
+
+  const hasWorkspaces = workspaces.length > 0
+  const workspaceInitial = activeWorkspace?.name
+    ? activeWorkspace.name.charAt(0).toUpperCase()
+    : "W"
+
+  const handleHeaderButtonClick = () => {
+    if (hasWorkspaces) {
+      setWorkspaceDialogOpen(true)
+    } else {
+      setCreateDialogOpen(true)
+    }
+  }
+
+  return (
+    <>
+      <SidebarProvider open={false} defaultOpen={false} onOpenChange={() => {}}>
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="border-b border-sidebar-border/50 p-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleHeaderButtonClick}
+                  tooltip={
+                    hasWorkspaces
+                      ? `Workspace: ${activeWorkspace?.name}`
+                      : "Create Workspace"
+                  }
+                  className="cursor-pointer justify-center bg-accent ring-1"
+                >
+                  {hasWorkspaces ? (
+                    <span className="text-md font-bold text-primary">
+                      {workspaceInitial}
+                    </span>
+                  ) : (
+                    <Plus className="size-4 text-primary" />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          <SidebarContent className="p-2">
+            {hasWorkspaces && (
+              <>
+                <SidebarGroup className="p-0">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarNavItem href="/" icon={Home} title="Dashboard" />
+                      <SidebarNavItem href="/search" icon={Search} title="Search" />
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup className="my-2 border-t border-sidebar-border/50 p-0" />
+
+                <SidebarGroup className="p-0">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarNavItem href="/inbox" icon={Inbox} title="Inbox" />
+                      <SidebarNavItem
+                        href="/boards"
+                        icon={KanbanSquare}
+                        title="Boards"
+                      />
+                      <SidebarNavItem
+                        href="/calendars"
+                        icon={Calendar}
+                        title="Calendars"
+                      />
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup className="my-2 border-t border-sidebar-border/50 p-0" />
+
+                <SidebarGroup className="p-0">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarNavItem
+                        href="/assistant"
+                        icon={BotMessageSquare}
+                        title="Assistant"
+                      />
+                      <SidebarNavItem
+                        href="/members"
+                        icon={Users}
+                        title="Members"
+                      />
+                      <SidebarNavItem
+                        href="/settings"
+                        icon={Settings}
+                        title="Settings"
+                      />
+                      <SidebarNavItem href="/about" icon={Info} title="About" />
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </>
+            )}
+          </SidebarContent>
+
+          <SidebarFooter className="border-t border-sidebar-border/50 p-2">
+            <NavUser />
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset>
+          <header className="flex items-center justify-center border-b border-sidebar-border/50 bg-sidebar p-1 text-xs font-semibold text-muted-foreground">
+            <span>
+              Kaizen
+              {hasWorkspaces && activeWorkspace?.name
+                ? ` • ${activeWorkspace.name}`
+                : ""}
+            </span>
+          </header>
+
+          <main className="flex flex-1 flex-col p-4">
+            {isLoading ? (
+              <div className="flex flex-1 items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                  <span className="text-xs">Loading workspace...</span>
+                </div>
+              </div>
+            ) : !hasWorkspaces ? (
+              <WorkspaceEmptyState onCreateClick={() => setCreateDialogOpen(true)} />
+            ) : (
+              children
+            )}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+
+      <WorkspaceCommandDialog
+        open={workspaceDialogOpen}
+        onOpenChange={setWorkspaceDialogOpen}
+      />
+
+      <CreateWorkspaceDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
+    </>
+  )
+}
+
+export default RootLayout

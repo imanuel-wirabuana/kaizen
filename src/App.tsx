@@ -1,20 +1,52 @@
-import { Button } from "@/components/ui/button"
+import { Redirect, Route, Switch } from "wouter"
+import { useAuth } from "@clerk/clerk-react"
+import { RootLayout } from "@/components/layout/root-layout"
+import { DashboardPage } from "@/pages/dashboard"
+import { InboxPage } from "@/pages/inbox"
+import { SearchPage } from "@/pages/search"
+import { BoardPage } from "@/pages/board"
+import { CalendarPage } from "@/pages/calendar"
+import { AssistantPage } from "@/pages/assistant"
+import { SettingsPage } from "@/pages/settings"
+import { MembersPage } from "@/pages/members"
+import { AboutPage } from "@/pages/about"
+import { LandingPage } from "@/pages/landing"
+import { NotFound } from "@/components/not-found"
 
 export function App() {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) {
+    return null
+  }
+
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <Switch>
+      {/* Standalone Landing Page at /home */}
+      <Route path="/home" component={LandingPage} />
+
+      {/* Authenticated workspace routes wrapped in RootLayout */}
+      <Route>
+        {!isSignedIn ? (
+          <Redirect to="/home" />
+        ) : (
+          <RootLayout>
+            <Switch>
+              <Route path="/" component={DashboardPage} />
+              <Route path="/inbox" component={InboxPage} />
+              <Route path="/search" component={SearchPage} />
+              <Route path="/boards" component={BoardPage} />
+              <Route path="/calendars" component={CalendarPage} />
+              <Route path="/assistant" component={AssistantPage} />
+              <Route path="/settings" component={SettingsPage} />
+              <Route path="/members" component={MembersPage} />
+              <Route path="/about" component={AboutPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </RootLayout>
+        )}
+      </Route>
+    </Switch>
   )
 }
 
