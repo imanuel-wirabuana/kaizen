@@ -7,6 +7,7 @@ export type InboxFolder = ZenboxFolder
 interface ZenState {
   zens: Zen[]
   selectedZenId: number | null
+  selectedBatchIds: number[]
   activeFolder: ZenboxFolder
   searchQuery: string
   showUnreadOnly: boolean
@@ -21,6 +22,9 @@ interface ZenState {
   upsertZen: (zen: Zen) => void
   removeZen: (id: number) => void
   setSearchQuery: (query: string) => void
+  toggleBatchSelect: (id: number) => void
+  selectAllBatch: (ids: number[]) => void
+  clearBatchSelect: () => void
   setIsLoading: (isLoading: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
@@ -29,6 +33,7 @@ interface ZenState {
 export const useZenStore = create<ZenState>()((set, get) => ({
   zens: [],
   selectedZenId: null,
+  selectedBatchIds: [],
   activeFolder: "zenbox",
   searchQuery: "",
   showUnreadOnly: false,
@@ -36,8 +41,11 @@ export const useZenStore = create<ZenState>()((set, get) => ({
   error: null,
 
   setZens: (zens) => {
-    const currentSelectedId = get().selectedZenId
-    const isSelectedStillValid = zens.some((z) => z.id === currentSelectedId)
+    const state = get()
+    if (state.zens === zens && !state.isLoading) return
+    const currentSelectedId = state.selectedZenId
+    const isSelectedStillValid =
+      currentSelectedId === null || zens.some((z) => z.id === currentSelectedId)
 
     set({
       zens,
@@ -47,10 +55,13 @@ export const useZenStore = create<ZenState>()((set, get) => ({
     })
   },
 
-  setSelectedZenId: (id) => set({ selectedZenId: id }),
+  setSelectedZenId: (id) => {
+    if (get().selectedZenId === id) return
+    set({ selectedZenId: id })
+  },
 
   setActiveFolder: (folder) => {
-    set({ activeFolder: folder })
+    set({ activeFolder: folder, selectedBatchIds: [] })
   },
 
   setShowUnreadOnly: (show) => set({ showUnreadOnly: show }),
@@ -73,16 +84,36 @@ export const useZenStore = create<ZenState>()((set, get) => ({
   },
 
   removeZen: (id) => {
-    const { zens, selectedZenId } = get()
+    const { zens, selectedZenId, selectedBatchIds } = get()
     const filtered = zens.filter((item) => item.id !== id)
 
     set({
       zens: filtered,
       selectedZenId: selectedZenId === id ? null : selectedZenId,
+      selectedBatchIds: selectedBatchIds.filter((item) => item !== id),
     })
   },
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchQuery: (query) => set({ searchQuery: query, selectedBatchIds: [] }),
+
+  toggleBatchSelect: (id) => {
+    const { selectedBatchIds } = get()
+    if (selectedBatchIds.includes(id)) {
+      set({ selectedBatchIds: selectedBatchIds.filter((item) => item !== id) })
+    } else {
+      set({ selectedBatchIds: [...selectedBatchIds, id] })
+    }
+  },
+
+  selectAllBatch: (ids) => {
+    set({ selectedBatchIds: ids })
+  },
+
+  clearBatchSelect: () => {
+    if (get().selectedBatchIds.length > 0) {
+      set({ selectedBatchIds: [] })
+    }
+  },
 
   setIsLoading: (isLoading) => set({ isLoading }),
 
@@ -92,6 +123,7 @@ export const useZenStore = create<ZenState>()((set, get) => ({
     set({
       zens: [],
       selectedZenId: null,
+      selectedBatchIds: [],
       activeFolder: "zenbox",
       searchQuery: "",
       showUnreadOnly: false,
@@ -154,3 +186,11 @@ export function useZenCount(): number {
   const zens = useFilteredZens()
   return zens.length
 }
+
+/**
+ * Selector hook for retrieving currently selected batch item IDs.
+ */
+export function useBatchSelectedIds(): number[] {
+  return useZenStore((state) => state.selectedBatchIds)
+}
+

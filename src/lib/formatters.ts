@@ -1,0 +1,17 @@
+/**
+ * Strips HTML tags and entities from a string to produce clean, plain text.
+ * Useful for snippet previews, search index matching, and card descriptions.
+ */
+export function stripHtml(html?: string | null): string {
+  if (!html) return ""
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+}

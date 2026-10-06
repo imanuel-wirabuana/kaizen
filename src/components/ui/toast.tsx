@@ -7,7 +7,81 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const toast = ToastPrimitive.createToastManager()
+const baseToastManager = ToastPrimitive.createToastManager()
+
+export interface ToastOptions {
+  description?: React.ReactNode
+  timeout?: number
+}
+
+type ToastFunction = (
+  title: React.ReactNode,
+  options?: ToastOptions | string
+) => string
+
+export interface EnhancedToastManager
+  extends ReturnType<typeof ToastPrimitive.createToastManager> {
+  success: ToastFunction
+  error: ToastFunction
+  info: ToastFunction
+  warning: ToastFunction
+  loading: ToastFunction
+}
+
+function resolveOptions(options?: ToastOptions | string): ToastOptions | undefined {
+  if (typeof options === "string") {
+    return { description: options }
+  }
+  return options
+}
+
+const toast = Object.assign(baseToastManager, {
+  success: (title: React.ReactNode, options?: ToastOptions | string) => {
+    const opts = resolveOptions(options)
+    return baseToastManager.add({
+      title,
+      type: "success",
+      description: opts?.description,
+      timeout: opts?.timeout,
+    })
+  },
+  error: (title: React.ReactNode, options?: ToastOptions | string) => {
+    const opts = resolveOptions(options)
+    return baseToastManager.add({
+      title,
+      type: "error",
+      description: opts?.description,
+      timeout: opts?.timeout,
+    })
+  },
+  info: (title: React.ReactNode, options?: ToastOptions | string) => {
+    const opts = resolveOptions(options)
+    return baseToastManager.add({
+      title,
+      type: "info",
+      description: opts?.description,
+      timeout: opts?.timeout,
+    })
+  },
+  warning: (title: React.ReactNode, options?: ToastOptions | string) => {
+    const opts = resolveOptions(options)
+    return baseToastManager.add({
+      title,
+      type: "warning",
+      description: opts?.description,
+      timeout: opts?.timeout,
+    })
+  },
+  loading: (title: React.ReactNode, options?: ToastOptions | string) => {
+    const opts = resolveOptions(options)
+    return baseToastManager.add({
+      title,
+      type: "loading",
+      description: opts?.description,
+      timeout: 0,
+    })
+  },
+}) as EnhancedToastManager
 
 function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
   return <ToastPrimitive.Provider {...props} />

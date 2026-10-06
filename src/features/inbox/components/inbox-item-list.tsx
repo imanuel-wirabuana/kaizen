@@ -1,8 +1,13 @@
+import { useUser } from "@clerk/clerk-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Checkbox } from "@/components/ui/checkbox"
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { InboxEmptyState } from "@/features/inbox/components/inbox-empty-state"
+import { useBatchSelectedIds, useZenStore } from "@/stores/zen-store"
 import type { Zen } from "@/types/zen"
 import { cn } from "cn"
 import { formatDistanceToNow } from "date-fns"
+import { stripHtml } from "@/lib/formatters"
 
 interface InboxItemListProps {
   zens: Zen[]
@@ -19,6 +24,11 @@ export function InboxItemList({
   searchQuery = "",
   onSelectZen,
 }: InboxItemListProps) {
+  const { user } = useUser()
+  const selectedBatchIds = useBatchSelectedIds()
+  const toggleBatchSelect = useZenStore((state) => state.toggleBatchSelect)
+  const isBatchMode = selectedBatchIds.length > 0
+
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-xs text-muted-foreground">
@@ -35,6 +45,7 @@ export function InboxItemList({
     <SidebarMenu className="gap-0 p-0">
       {zens.map((zen) => {
         const isSelected = selectedZenId === zen.id
+        const isBatchSelected = selectedBatchIds.includes(zen.id)
 
         const formattedDate = (() => {
           try {
@@ -46,39 +57,141 @@ export function InboxItemList({
           }
         })()
 
+        const isCurrentUser = Boolean(user && zen.owner_id === user.id)
+
+        const ownerName = isCurrentUser
+          ? "You"
+          : (typeof zen.settings?.owner_name === "string" &&
+              zen.settings.owner_name) ||
+            "Member"
+
+        const ownerFullName = isCurrentUser
+          ? user?.fullName ||
+            [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+            user?.username ||
+            "You"
+          : (typeof zen.settings?.owner_name === "string" &&
+              zen.settings.owner_name) ||
+            "Member"
+
+        const ownerImageUrl = isCurrentUser
+          ? user?.imageUrl
+          : (typeof zen.settings?.owner_image === "string" &&
+              zen.settings.owner_image) ||
+            undefined
+
+        const initials = (() => {
+          if (isCurrentUser) {
+            const first = user?.firstName?.[0]
+            const last = user?.lastName?.[0]
+            if (first && last) return `${first}${last}`.toUpperCase()
+            if (first) return first.toUpperCase()
+            if (user?.username) return user.username.slice(0, 2).toUpperCase()
+            return "U"
+          }
+          const nameStr =
+            (typeof zen.settings?.owner_name === "string" &&
+              zen.settings.owner_name) ||
+            ""
+          if (nameStr.trim()) {
+            const parts = nameStr.trim().split(/\s+/)
+            if (parts.length >= 2) {
+              return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+            }
+            return parts[0].slice(0, 2).toUpperCase()
+          }
+          return "M"
+        })()
+
         return (
           <SidebarMenuItem
             key={zen.id}
-            className="p-0 border-b border-border/50 last:border-b-0"
+            className="group/item border-b border-border/50 p-0 last:border-b-0"
           >
-            <button
-              type="button"
-              onClick={() => onSelectZen(zen.id)}
+            <div
               className={cn(
-                "flex flex-col items-start gap-1.5 p-3.5 text-left text-sm leading-tight transition-colors cursor-pointer w-full hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "flex w-full items-start gap-2 p-2.5 text-left text-sm leading-tight transition-colors select-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 isSelected &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+                isBatchSelected &&
+                  "bg-sidebar-accent/60 ring-1 ring-primary/30 ring-inset"
               )}
             >
-              <div className="flex w-full items-center gap-2">
-                <span className="font-semibold text-xs text-foreground truncate">
-                  {zen.name}
-                </span>
-                <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
-                  {formattedDate}
-                </span>
+              {/* Standalone Checkbox Area */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "mt-0.5 hidden shrink-0 items-center justify-center",
+                  isBatchMode || isBatchSelected
+                    ? "flex"
+                    : "hidden group-hover/item:flex"
+                )}
+              >
+                <Checkbox
+                  checked={isBatchSelected}
+                  onCheckedChange={() => toggleBatchSelect(zen.id)}
+                  className="size-3.5 cursor-pointer border-primary"
+                  aria-label={`Select ${zen.name}`}
+                />
               </div>
 
-              {zen.description ? (
-                <span className="line-clamp-2 text-xs text-muted-foreground whitespace-break-spaces">
-                  {zen.description}
-                </span>
-              ) : (
-                <span className="text-xs italic text-muted-foreground/60">
-                  No notes or description provided.
-                </span>
-              )}
-            </button>
+              {/* Clickable Item Content */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey) {
+                    e.preventDefault()
+                    toggleBatchSelect(zen.id)
+                    return
+                  }
+                  onSelectZen(zen.id)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onSelectZen(zen.id)
+                  }
+                }}
+                className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-1 text-left outline-none"
+              >
+                <div className="flex w-full items-center gap-2">
+                  <span className="flex-1 truncate text-xs font-semibold text-foreground">
+                    {zen.name}
+                  </span>
+                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                    {formattedDate}
+                  </span>
+                </div>
+
+                {stripHtml(zen.description) ? (
+                  <span className="line-clamp-2 text-xs whitespace-break-spaces text-muted-foreground">
+                    {stripHtml(zen.description)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground/60 italic">
+                    No notes or description provided.
+                  </span>
+                )}
+
+                <div
+                  className="flex w-full items-center gap-1.5 pt-1 text-muted-foreground"
+                  title={`Created by ${ownerFullName}`}
+                >
+                  <Avatar className="size-4 shrink-0">
+                    {ownerImageUrl ? (
+                      <AvatarImage src={ownerImageUrl} alt={ownerFullName} />
+                    ) : null}
+                    <AvatarFallback className="bg-muted text-[8px] leading-none font-semibold text-muted-foreground uppercase">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate text-[11px] font-normal">
+                    {ownerName}
+                  </span>
+                </div>
+              </div>
+            </div>
           </SidebarMenuItem>
         )
       })}

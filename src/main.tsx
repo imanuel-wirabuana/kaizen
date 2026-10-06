@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client"
 
 import "./index.css"
 import App from "./App.tsx"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { queryClient } from "@/lib/query-client"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { ClerkProviderWithTheme } from "@/components/clerk-provider-with-theme.tsx"
 
@@ -16,10 +18,12 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider>
-      <ClerkProviderWithTheme publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-        <App />
-      </ClerkProviderWithTheme>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ClerkProviderWithTheme publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+          <App />
+        </ClerkProviderWithTheme>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>
 )

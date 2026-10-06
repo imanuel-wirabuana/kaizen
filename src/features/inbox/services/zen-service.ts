@@ -131,12 +131,85 @@ export async function deleteZenRecord(id: number): Promise<boolean> {
     .from("zens")
     .delete()
     .eq("id", id)
+    .not("archived_at", "is", null)
 
   if (error) {
     throw new Error(`Failed to delete zen: ${error.message}`)
   }
 
   return true
+}
+
+/**
+ * Soft-delete (archive) multiple Zen records in batch.
+ */
+export async function batchArchiveZenRecords(ids: number[]): Promise<boolean> {
+  if (ids.length === 0) return true
+
+  const { error } = await supabase
+    .from("zens")
+    .update({
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", ids)
+
+  if (error) {
+    throw new Error(`Failed to batch archive zens: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Restore multiple archived Zen records in batch.
+ */
+export async function batchRestoreZenRecords(ids: number[]): Promise<boolean> {
+  if (ids.length === 0) return true
+
+  const { error } = await supabase
+    .from("zens")
+    .update({
+      archived_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", ids)
+
+  if (error) {
+    throw new Error(`Failed to batch restore zens: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Permanently delete multiple archived Zen records in batch.
+ */
+export async function batchDeleteZenRecords(ids: number[]): Promise<boolean> {
+  if (ids.length === 0) return true
+
+  const { error } = await supabase
+    .from("zens")
+    .delete()
+    .in("id", ids)
+    .not("archived_at", "is", null)
+
+  if (error) {
+    throw new Error(`Failed to batch delete zens: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Soft-delete then permanently delete multiple Zen records.
+ */
+export async function batchArchiveAndDeleteZenRecords(
+  ids: number[]
+): Promise<boolean> {
+  if (ids.length === 0) return true
+  await batchArchiveZenRecords(ids)
+  return batchDeleteZenRecords(ids)
 }
 
 let activeChannel: RealtimeChannel | null = null

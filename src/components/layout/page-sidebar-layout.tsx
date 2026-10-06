@@ -88,11 +88,11 @@ function PageSidebarLayoutInner({
 
   return (
     <div className="flex size-full flex-1 overflow-hidden">
-      {/* Collapsible Page Sidebar */}
+      {/* Collapsible Page Sidebar - Fixed / Sticky */}
       <Sidebar
         collapsible="none"
         className={cn(
-          "flex h-full shrink-0 flex-col border-r border-border bg-sidebar/20 transition-all duration-200 ease-in-out",
+          "sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar/20 transition-all duration-200 ease-in-out",
           open
             ? "opacity-100"
             : "pointer-events-none w-0 overflow-hidden border-r-0 opacity-0",
@@ -145,7 +145,7 @@ export function PageSidebarLayout({
       open={open}
       onOpenChange={handleOpenChange}
       className={cn(
-        "flex h-[calc(100vh-4.25rem)] min-h-0 w-full flex-1 overflow-hidden border border-border bg-card shadow-xs",
+        "flex h-full min-h-0 w-full flex-1 overflow-hidden",
         className
       )}
     >

@@ -1,6 +1,7 @@
 import { Redirect, Route, Switch } from "wouter"
 import { useAuth } from "@clerk/clerk-react"
 import { RootLayout } from "@/components/layout/root-layout"
+import { Toaster } from "@/components/ui/toast"
 import { DashboardPage } from "@/pages/dashboard"
 import { InboxPage } from "@/pages/inbox"
 import { SearchPage } from "@/pages/search"
@@ -21,7 +22,8 @@ export function App() {
   }
 
   return (
-    <Switch>
+    <>
+      <Switch>
       {/* Standalone Landing Page at /home */}
       <Route path="/home" component={LandingPage} />
 
@@ -33,27 +35,40 @@ export function App() {
           <RootLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
-              <Route path="/inbox/:id?">
-                {(params) => (
-                  <Redirect to={params.id ? `/zenbox/${params.id}` : "/zenbox"} />
-                )}
-              </Route>
+              <Route path="/search" component={SearchPage} />
+
+              {/* zenbox */}
               <Route path="/zenbox" component={InboxPage} />
               <Route path="/zenbox/:id" component={InboxPage} />
-              <Route path="/search" component={SearchPage} />
+
+              {/* boards */}
               <Route path="/boards" component={BoardPage} />
+
+              {/* calendar */}
               <Route path="/calendars" component={CalendarPage} />
+
+              {/* assistant */}
               <Route path="/assistant" component={AssistantPage} />
+
+              {/* settings */}
               <Route path="/settings" component={SettingsPage} />
+
+              {/* members */}
               <Route path="/members" component={MembersPage} />
+
+              {/* about */}
               <Route path="/about" component={AboutPage} />
+
+              {/* not found */}
               <Route component={NotFound} />
             </Switch>
           </RootLayout>
         )}
       </Route>
     </Switch>
-  )
+    <Toaster />
+  </>
+)
 }
 
 export default App

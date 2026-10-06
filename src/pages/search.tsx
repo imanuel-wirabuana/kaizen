@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
+import { useInboxZens } from "@/features/inbox/hooks/use-inbox-zens"
+
 interface SearchResult {
   id: string
   title: string
@@ -66,8 +68,22 @@ const SEARCH_DATABASE: SearchResult[] = [
 export function SearchPage() {
   const [query, setQuery] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
+  const { zens } = useInboxZens()
 
-  const filteredResults = SEARCH_DATABASE.filter((item) => {
+  const liveZenResults: SearchResult[] = zens.map((z) => ({
+    id: `zen-${z.id}`,
+    title: z.name,
+    type: "zenbox",
+    snippet: z.description
+      ? z.description.replace(/<[^>]+>/g, "").slice(0, 100)
+      : "Zenbox item in active workspace",
+    link: `/zenbox/${z.id}`,
+    time: "Live item",
+  }))
+
+  const allItems = [...liveZenResults, ...SEARCH_DATABASE]
+
+  const filteredResults = allItems.filter((item) => {
     const matchesQuery =
       item.title.toLowerCase().includes(query.toLowerCase()) ||
       item.snippet.toLowerCase().includes(query.toLowerCase())

@@ -80,7 +80,12 @@ export function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <SidebarProvider open={false} defaultOpen={false} onOpenChange={() => {}}>
+      <SidebarProvider
+        open={false}
+        defaultOpen={false}
+        onOpenChange={() => {}}
+        className="h-svh max-h-svh overflow-hidden"
+      >
         <Sidebar collapsible="icon">
           <SidebarHeader className="border-b border-sidebar-border/50 p-2">
             <SidebarMenu>
@@ -179,8 +184,8 @@ export function RootLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
-          <header className="flex items-center justify-center border-b border-sidebar-border/50 bg-sidebar p-1 text-xs font-semibold text-muted-foreground">
+        <SidebarInset className="flex h-svh max-h-svh min-h-0 flex-1 flex-col overflow-hidden">
+          <header className="sticky top-0 z-50 flex shrink-0 items-center justify-center border-b border-border bg-sidebar p-1 text-xs font-semibold text-muted-foreground">
             <span>
               Kaizen
               {hasWorkspaces && activeWorkspace?.name
@@ -189,7 +194,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
             </span>
           </header>
 
-          <main className="flex flex-1 flex-col p-0">
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-0">
             {isLoading ? (
               <div className="flex min-h-[60vh] flex-1 items-center justify-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">

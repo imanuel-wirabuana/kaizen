@@ -18,6 +18,13 @@ export function InboxPage() {
     archiveZen,
     restoreZen,
     deleteZen,
+    batchArchiveZens,
+    batchRestoreZens,
+    batchDeleteZens,
+    batchArchiveAndDeleteZens,
+    selectedBatchIds,
+    selectAllBatch,
+    clearBatchSelect,
     setSelectedZenId,
     setActiveFolder,
     setShowUnreadOnly,
@@ -27,8 +34,8 @@ export function InboxPage() {
   const zenboxCount = zens.filter((z) => !z.archived_at).length
   const archivedCount = zens.filter((z) => Boolean(z.archived_at)).length
 
-  const handleCapture = async (name: string) => {
-    await createZen(name)
+  const handleCapture = async (name: string = "Untitled") => {
+    return createZen(name || "Untitled")
   }
 
   const handleUpdate = async (
@@ -52,6 +59,7 @@ export function InboxPage() {
 
   return (
     <PageSidebarLayout
+      className="bg-card"
       sidebar={
         <InboxSidebar
           activeFolder={activeFolder}
@@ -67,6 +75,13 @@ export function InboxPage() {
           selectedZenId={selectedZenId}
           onSelectZen={setSelectedZenId}
           isLoading={isLoading}
+          selectedBatchIds={selectedBatchIds}
+          onSelectAllBatch={() => selectAllBatch(filteredZens.map((z) => z.id))}
+          onClearBatchSelect={clearBatchSelect}
+          onBatchArchive={batchArchiveZens}
+          onBatchRestore={batchRestoreZens}
+          onBatchDelete={batchDeleteZens}
+          onBatchArchiveAndDelete={batchArchiveAndDeleteZens}
         />
       }
     >

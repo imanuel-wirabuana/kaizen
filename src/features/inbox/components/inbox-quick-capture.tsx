@@ -1,61 +1,56 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { Plus, Loader2 } from "lucide-react"
+import { useLocation } from "wouter"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
+import type { Zen } from "@/types/zen"
 
-interface InboxQuickCaptureProps {
-  onCapture: (name: string) => Promise<void>
+export interface InboxQuickCaptureProps {
+  onCapture?: (name?: string) => Promise<Zen | void>
   disabled?: boolean
+  className?: string
 }
 
 export function InboxQuickCapture({
   onCapture,
   disabled = false,
+  className,
 }: InboxQuickCaptureProps) {
-  const [name, setName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, setLocation] = useLocation()
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed || isSubmitting) return
+  const handleClick = async () => {
+    if (disabled || isSubmitting) return
 
     try {
       setIsSubmitting(true)
-      await onCapture(trimmed)
-      setName("")
+      const result = await onCapture?.("Untitled")
+      if (result && typeof result === "object" && "id" in result) {
+        setLocation(`/zenbox/${result.id}`)
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
+    <Button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled || isSubmitting}
+      className={cn(
+        "h-8 w-full cursor-pointer justify-center gap-2 text-xs font-medium shadow-xs transition-all",
+        className
+      )}
     >
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Capture a thought, note, or item into zenbox..."
-        disabled={disabled || isSubmitting}
-        className="h-8 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0 md:text-xs"
-      />
-
-      <Button
-        type="submit"
-        size="icon"
-        disabled={disabled || isSubmitting || !name.trim()}
-        className="h-7 shrink-0 cursor-pointer gap-1.5 px-3 text-xs"
-      >
-        {isSubmitting ? (
-          <Loader2 className="size-3 animate-spin" />
-        ) : (
-          <span>
-            <Plus />
-          </span>
-        )}
-      </Button>
-    </form>
+      {isSubmitting ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Plus className="size-3.5" />
+      )}
+      <span>New Zen</span>
+    </Button>
   )
 }
+
+export default InboxQuickCapture

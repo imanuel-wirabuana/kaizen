@@ -29,7 +29,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       error: null,
 
       setWorkspaces: (workspaces) => {
-        const currentActiveId = get().activeWorkspaceId
+        const state = get()
+        if (state.workspaces === workspaces && !state.isLoading) return
+        const currentActiveId = state.activeWorkspaceId
         const hasValidActive = workspaces.some((w) => w.id === currentActiveId)
 
         set({

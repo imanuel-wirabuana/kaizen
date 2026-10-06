@@ -6,14 +6,21 @@ This document outlines the architectural rules, coding standards, and project co
 
 ## 1. Core Architectural Rules
 
-### 1.1 State Management: No React Context (Use Zustand)
+### 1.1 Mandatory Server State: Always Use TanStack React Query
+- **Strict Requirement for Asynchronous State**: ALL server-side asynchronous data fetching, caching, refetching, mutations, and optimistic updates **MUST ALWAYS** use **TanStack React Query** (`@tanstack/react-query`).
+- **Zero Raw Async Effects**: Never use ad-hoc `useEffect` with raw `fetch` or direct Supabase queries to populate component state or Zustand stores. Always encapsulate queries in domain hooks (`src/features/*/hooks/`) using `useQuery` and mutations using `useMutation`.
+- **Query Key Factories**: Always define structured, type-safe query key factories (e.g., `workspaceKeys`, `zenKeys`) for consistent cache tagging and targeted invalidations.
+- **Cache Policies**: Configure explicit `staleTime` (e.g. 5 minutes) and `gcTime` (e.g. 30 minutes) on queries so data is warm and immediately returned with 0ms flash when navigating between routes.
+- **Realtime Integration with React Query**: Realtime subscriptions (`postgres_changes`) must update the React Query cache directly using `queryClient.setQueryData` for 0ms instantaneous UI updates, and/or invalidate relevant query keys (`queryClient.invalidateQueries`). Realtime listeners must never bypass or obstruct the React Query cache.
+
+### 1.2 Client State Management: No React Context (Use Zustand)
 - **Strict Ban on React Context for Application State**: Do **not** use `createContext` or `useContext` for global, domain, or UI state management.
-- **Zustand as Single Source of Truth**: All shared state, active workspace state, session preferences, and cross-component communication must be managed using **Zustand** stores (`src/stores/`).
-  - *Exception*: Third-party library providers required by external SDKs (such as Clerk's `<ClerkProvider>` or Base UI primitive contexts) are permissible only at the root level.
-- **Selectors & Performance**: Always use granular selectors when consuming Zustand stores (e.g., `useWorkspaceStore((s) => s.activeWorkspace)`) to prevent unnecessary re-renders.
+- **Zustand for Synchronous UI & Client State**: All client-side UI flags, active selections (such as `activeWorkspaceId`, `activeFolder`), filter options (`showUnreadOnly`, `searchQuery`), and modal/drawer open states must be managed using **Zustand** stores (`src/stores/`).
+  - *Exception*: Root-level third-party SDK providers (such as Clerk's `<ClerkProvider>`, TanStack's `<QueryClientProvider>`, or Base UI primitive contexts) are permissible only at the application root level (`src/main.tsx`).
+- **Selectors & Performance**: Always use granular selectors when consuming Zustand stores (e.g., `useWorkspaceStore((s) => s.activeWorkspaceId)`) to prevent unnecessary re-renders.
 - **Persistence**: Utilize Zustand's `persist` middleware for state that should survive browser refreshes (e.g., selected workspace ID, theme mode).
 
-### 1.2 Strict Separation of Concerns (SoC)
+### 1.3 Strict Separation of Concerns (SoC)
 Organize code modularly by domain and responsibility:
 
 ```
@@ -45,7 +52,7 @@ src/
 - **Keep Pages Thin**: Route pages in `src/pages/` should serve only as layout containers and coordinators. Business logic, data fetching, and rich UI elements belong in `src/features/` or `src/components/`.
 - **Decouple Data Access**: UI components must never make direct ad-hoc Supabase queries or raw fetch calls. Always delegate database and API operations to `services/` or `features/*/services/`.
 
-### 1.3 Maximum Library Utilization
+### 1.4 Maximum Library Utilization
 Always leverage existing dependencies; never reinvent wheel components:
 - **shadcn / Base UI (`src/components/ui/`)**: Always check and utilize existing primitives (`Button`, `Dialog`, `Command`, `Empty`, `Input`, `Textarea`, `Card`, `Badge`, `DropdownMenu`, `Tabs`, `Sidebar`, etc.) before creating custom HTML elements.
 - **TanStack React Query**: Use React Query for server-side asynchronous state caching, refetching, mutations, and optimistic updates alongside Supabase.
@@ -53,6 +60,12 @@ Always leverage existing dependencies; never reinvent wheel components:
 - **Lucide React**: Use Lucide icons consistently.
 - **Wouter**: Use Wouter (`Link`, `useRoute`, `useLocation`, `Switch`, `Route`, `Redirect`) for routing and navigation.
 - **Tailwind CSS v4 & OKLCH Tokens**: Use semantic theme classes (`bg-background`, `text-foreground`, `bg-primary`, `text-muted-foreground`, `border-border`, etc.) instead of hardcoded hex colors.
+
+### 1.5 Mandatory User Feedback for Mutations (Always Use Toasts)
+- **Strict Requirement for Mutation Toasts**: Every asynchronous mutation that modifies server or client data (create, update, archive, restore, delete) **MUST ALWAYS** provide explicit user feedback via toasts (`toast.success` upon successful completion, and `toast.error` upon failure).
+- **Zero Silent Mutations or Failures**: Never execute mutations silently without notifying the user. Always inform the user with clear context (e.g., item name in description, specific failure reason).
+- **Centralized Toast System**: Always use the design system's toast manager from `@/components/ui/toast` (`toast.success(title, description | options)`, `toast.error(...)`, `toast.info(...)`, `toast.warning(...)`).
+- **Debounced Auto-save Exception**: For continuous keystroke auto-saving (e.g., rich text document editors), avoid spamming success toasts on every keystroke, but **always** invoke `toast.error` if an auto-save operation fails.
 
 ---
 

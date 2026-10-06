@@ -25,6 +25,8 @@ import {
   YAxis,
 } from "recharts"
 
+import { useInboxZens } from "@/features/inbox/hooks/use-inbox-zens"
+
 const ACTIVITY_DATA = [
   { day: "Mon", tasks: 4, focusMinutes: 90 },
   { day: "Tue", tasks: 6, focusMinutes: 140 },
@@ -36,6 +38,10 @@ const ACTIVITY_DATA = [
 ]
 
 export function DashboardPage() {
+  const { zens } = useInboxZens()
+  const activeZens = zens.filter((z) => !z.archived_at)
+  const totalActive = activeZens.length
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header Banner */}
@@ -75,12 +81,12 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight">4</span>
-            <span className="text-[11px] text-muted-foreground">3 uncompleted</span>
+            <span className="text-2xl font-bold tracking-tight">{totalActive}</span>
+            <span className="text-[11px] text-muted-foreground">{totalActive} active in zenbox</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
             <TrendingUp className="size-3" />
-            <span>+2 captured today</span>
+            <span>Live sync enabled</span>
           </div>
         </Card>
 
