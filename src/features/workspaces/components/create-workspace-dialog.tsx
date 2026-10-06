@@ -22,7 +22,7 @@ interface CreateWorkspaceDialogProps {
 const VIEW_OPTIONS = [
   { id: "boards", label: "Boards" },
   { id: "calendars", label: "Calendars" },
-  { id: "inbox", label: "Inbox" },
+  { id: "zenbox", label: "Zenbox" },
 ] as const
 
 export function CreateWorkspaceDialog({

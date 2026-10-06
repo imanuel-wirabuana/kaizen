@@ -33,7 +33,13 @@ export function App() {
           <RootLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
-              <Route path="/inbox" component={InboxPage} />
+              <Route path="/inbox/:id?">
+                {(params) => (
+                  <Redirect to={params.id ? `/zenbox/${params.id}` : "/zenbox"} />
+                )}
+              </Route>
+              <Route path="/zenbox" component={InboxPage} />
+              <Route path="/zenbox/:id" component={InboxPage} />
               <Route path="/search" component={SearchPage} />
               <Route path="/boards" component={BoardPage} />
               <Route path="/calendars" component={CalendarPage} />

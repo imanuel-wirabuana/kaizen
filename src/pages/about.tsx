@@ -34,7 +34,7 @@ export function AboutPage() {
             <Zap className="size-4" />
           </div>
           <div>
-            <h4 className="font-semibold text-xs">Inbox & Daily Triage</h4>
+            <h4 className="font-semibold text-xs">Zenbox & Daily Triage</h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Quickly capture tasks, ideas, and reminders without friction.
             </p>

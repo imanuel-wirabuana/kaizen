@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { Link, useRoute } from "wouter"
+import { Link, useLocation } from "wouter"
 import { NavUser } from "@/components/layout/nav-user"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { WorkspaceCommandDialog } from "@/features/workspaces/components/workspace-command-dialog"
@@ -39,7 +39,11 @@ interface NavItemProps {
 }
 
 function SidebarNavItem({ href, icon: Icon, title }: NavItemProps) {
-  const [isActive] = useRoute(href)
+  const [location] = useLocation()
+  const isActive =
+    href === "/"
+      ? location === "/"
+      : location === href || location.startsWith(`${href}/`)
 
   return (
     <SidebarMenuItem>
@@ -109,7 +113,11 @@ export function RootLayout({ children }: { children: ReactNode }) {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <SidebarNavItem href="/" icon={Home} title="Dashboard" />
-                      <SidebarNavItem href="/search" icon={Search} title="Search" />
+                      <SidebarNavItem
+                        href="/search"
+                        icon={Search}
+                        title="Search"
+                      />
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -119,7 +127,11 @@ export function RootLayout({ children }: { children: ReactNode }) {
                 <SidebarGroup className="p-0">
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      <SidebarNavItem href="/inbox" icon={Inbox} title="Inbox" />
+                      <SidebarNavItem
+                        href="/zenbox"
+                        icon={Inbox}
+                        title="Zenbox"
+                      />
                       <SidebarNavItem
                         href="/boards"
                         icon={KanbanSquare}
@@ -177,16 +189,18 @@ export function RootLayout({ children }: { children: ReactNode }) {
             </span>
           </header>
 
-          <main className="flex flex-1 flex-col p-4">
+          <main className="flex flex-1 flex-col p-0">
             {isLoading ? (
-              <div className="flex flex-1 items-center justify-center min-h-[60vh]">
+              <div className="flex min-h-[60vh] flex-1 items-center justify-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Loader2 className="size-6 animate-spin text-primary" />
                   <span className="text-xs">Loading workspace...</span>
                 </div>
               </div>
             ) : !hasWorkspaces ? (
-              <WorkspaceEmptyState onCreateClick={() => setCreateDialogOpen(true)} />
+              <WorkspaceEmptyState
+                onCreateClick={() => setCreateDialogOpen(true)}
+              />
             ) : (
               children
             )}

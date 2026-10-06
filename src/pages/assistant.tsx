@@ -21,7 +21,7 @@ const INITIAL_MESSAGES: Message[] = [
 ]
 
 const QUICK_PROMPTS = [
-  "Summarize today's inbox tasks",
+  "Summarize today's zenbox tasks",
   "Generate a 3-step action plan for my goals",
   "Review my habits and suggest 1% improvements",
 ]

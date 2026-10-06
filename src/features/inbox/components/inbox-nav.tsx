@@ -1,25 +1,25 @@
-import { ArchiveX, File, Inbox } from "lucide-react"
-import { cn } from "cn"
-import type { InboxFolder } from "@/stores/zen-store"
+import { ArchiveX, Inbox } from "lucide-react"
+import type { ZenboxFolder } from "@/stores/zen-store"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface InboxNavProps {
-  activeFolder: InboxFolder
-  onSelectFolder: (folder: InboxFolder) => void
-  inboxCount: number
+  activeFolder: ZenboxFolder
+  onSelectFolder: (folder: ZenboxFolder) => void
+  zenboxCount: number
   archivedCount: number
-  allCount: number
 }
 
 const NAV_ITEMS = [
   {
-    id: "inbox" as const,
-    title: "Inbox",
+    id: "zenbox" as const,
+    title: "Zenbox",
     icon: Inbox,
-  },
-  {
-    id: "all" as const,
-    title: "All Items",
-    icon: File,
   },
   {
     id: "archived" as const,
@@ -31,66 +31,73 @@ const NAV_ITEMS = [
 export function InboxNav({
   activeFolder,
   onSelectFolder,
-  inboxCount,
+  zenboxCount,
   archivedCount,
-  allCount,
 }: InboxNavProps) {
-  const getCount = (id: InboxFolder) => {
+  const getCount = (id: ZenboxFolder) => {
     switch (id) {
-      case "inbox":
-        return inboxCount
+      case "zenbox":
+        return zenboxCount
       case "archived":
         return archivedCount
-      case "all":
-        return allCount
     }
   }
 
   return (
-    <div className="flex flex-col gap-1 p-2 w-48 shrink-0 border-r border-border bg-sidebar/50">
-      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Mailbox
-      </div>
+    <Select
+      value={activeFolder}
+      onValueChange={(val) => {
+        if (val) {
+          onSelectFolder(val as ZenboxFolder)
+        }
+      }}
+    >
+      <SelectTrigger className="h-8 w-full bg-card text-xs">
+        <SelectValue>
+          {() => {
+            const item = NAV_ITEMS.find((n) => n.id === activeFolder)
+            if (!item) return "Select folder..."
+            const Icon = item.icon
+            const count = getCount(item.id)
 
-      <nav className="flex flex-col gap-0.5">
+            return (
+              <span className="flex items-center gap-2">
+                <Icon className="size-3.5 shrink-0 text-primary" />
+                <span className="font-semibold text-foreground">{item.title}</span>
+                {count > 0 && (
+                  <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+                    {count}
+                  </span>
+                )}
+              </span>
+            )
+          }}
+        </SelectValue>
+      </SelectTrigger>
+
+      <SelectContent className="w-(--anchor-width) min-w-44">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
-          const isActive = activeFolder === item.id
           const count = getCount(item.id)
 
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onSelectFolder(item.id)}
-              className={cn(
-                "flex items-center justify-between gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer text-left",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2 truncate">
-                <Icon className="size-4 shrink-0" />
-                <span className="truncate">{item.title}</span>
-              </div>
-
-              {count > 0 && (
-                <span
-                  className={cn(
-                    "ml-auto text-[10px] rounded-full px-1.5 py-0.2",
-                    isActive
-                      ? "bg-primary text-primary-foreground font-semibold"
-                      : "text-muted-foreground bg-muted"
-                  )}
-                >
-                  {count}
-                </span>
-              )}
-            </button>
+            <SelectItem key={item.id} value={item.id} className="cursor-pointer pr-7">
+              <span className="flex flex-1 items-center gap-2">
+                <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                <span>{item.title}</span>
+                {count > 0 && (
+                  <span className="ml-auto rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-medium text-muted-foreground">
+                    {count}
+                  </span>
+                )}
+              </span>
+            </SelectItem>
           )
         })}
-      </nav>
-    </div>
+      </SelectContent>
+    </Select>
   )
 }
+
+export { InboxNav as ZenboxNav }
+

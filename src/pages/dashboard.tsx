@@ -54,9 +54,9 @@ export function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link href="/inbox" className={buttonVariants({ variant: "default", size: "sm", className: "gap-1.5" })}>
+          <Link href="/zenbox" className={buttonVariants({ variant: "default", size: "sm", className: "gap-1.5" })}>
             <Inbox className="size-3.5" />
-            <span>Open Inbox</span>
+            <span>Open Zenbox</span>
           </Link>
           <Link href="/assistant" className={buttonVariants({ variant: "outline", size: "sm", className: "gap-1.5" })}>
             <BotMessageSquare className="size-3.5" />
@@ -69,7 +69,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4 flex flex-col gap-2 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Inbox Items</span>
+            <span className="text-xs font-medium">Zenbox Items</span>
             <div className="p-1.5 rounded-md bg-muted text-primary">
               <Inbox className="size-4" />
             </div>
@@ -192,7 +192,7 @@ export function DashboardPage() {
 
           <div className="flex flex-col gap-2">
             <Link
-              href="/inbox"
+              href="/zenbox"
               className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors shadow-2xs group"
             >
               <div className="flex items-center gap-3">
@@ -200,8 +200,8 @@ export function DashboardPage() {
                   <Inbox className="size-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-semibold">Triage Inbox</span>
-                  <span className="text-[11px] text-muted-foreground">Capture and organize incoming items</span>
+                  <span className="text-xs font-semibold">Triage Zenbox</span>
+                  <span className="text-[11px] text-muted-foreground">Capture and organize incoming items in zenbox</span>
                 </div>
               </div>
               <ArrowRight className="size-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />

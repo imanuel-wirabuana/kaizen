@@ -1,12 +1,13 @@
 import { create } from "zustand"
 import type { Zen } from "@/types/zen"
 
-export type InboxFolder = "inbox" | "all" | "archived"
+export type ZenboxFolder = "zenbox" | "archived"
+export type InboxFolder = ZenboxFolder
 
 interface ZenState {
   zens: Zen[]
   selectedZenId: number | null
-  activeFolder: InboxFolder
+  activeFolder: ZenboxFolder
   searchQuery: string
   showUnreadOnly: boolean
   isLoading: boolean
@@ -15,7 +16,7 @@ interface ZenState {
   // Actions
   setZens: (zens: Zen[]) => void
   setSelectedZenId: (id: number | null) => void
-  setActiveFolder: (folder: InboxFolder) => void
+  setActiveFolder: (folder: ZenboxFolder) => void
   setShowUnreadOnly: (show: boolean) => void
   upsertZen: (zen: Zen) => void
   removeZen: (id: number) => void
@@ -28,7 +29,7 @@ interface ZenState {
 export const useZenStore = create<ZenState>()((set, get) => ({
   zens: [],
   selectedZenId: null,
-  activeFolder: "inbox",
+  activeFolder: "zenbox",
   searchQuery: "",
   showUnreadOnly: false,
   isLoading: true,
@@ -40,11 +41,7 @@ export const useZenStore = create<ZenState>()((set, get) => ({
 
     set({
       zens,
-      selectedZenId: isSelectedStillValid
-        ? currentSelectedId
-        : zens.length > 0
-          ? zens[0].id
-          : null,
+      selectedZenId: isSelectedStillValid ? currentSelectedId : null,
       isLoading: false,
       error: null,
     })
@@ -59,7 +56,7 @@ export const useZenStore = create<ZenState>()((set, get) => ({
   setShowUnreadOnly: (show) => set({ showUnreadOnly: show }),
 
   upsertZen: (zen) => {
-    const { zens, selectedZenId } = get()
+    const { zens } = get()
 
     const index = zens.findIndex((item) => item.id === zen.id)
     let updatedList: Zen[]
@@ -72,23 +69,16 @@ export const useZenStore = create<ZenState>()((set, get) => ({
 
     set({
       zens: updatedList,
-      selectedZenId: selectedZenId ?? zen.id,
     })
   },
 
   removeZen: (id) => {
     const { zens, selectedZenId } = get()
     const filtered = zens.filter((item) => item.id !== id)
-    const nextSelectedId =
-      selectedZenId === id
-        ? filtered.length > 0
-          ? filtered[0].id
-          : null
-        : selectedZenId
 
     set({
       zens: filtered,
-      selectedZenId: nextSelectedId,
+      selectedZenId: selectedZenId === id ? null : selectedZenId,
     })
   },
 
@@ -102,7 +92,7 @@ export const useZenStore = create<ZenState>()((set, get) => ({
     set({
       zens: [],
       selectedZenId: null,
-      activeFolder: "inbox",
+      activeFolder: "zenbox",
       searchQuery: "",
       showUnreadOnly: false,
       isLoading: false,
@@ -120,7 +110,10 @@ export function useFilteredZens(): Zen[] {
 
   return zens.filter((zen) => {
     // Folder filter
-    if (activeFolder === "inbox" && zen.archived_at) {
+    if (
+      (activeFolder === "zenbox" || (activeFolder as string) === "inbox") &&
+      zen.archived_at
+    ) {
       return false
     }
     if (activeFolder === "archived" && !zen.archived_at) {

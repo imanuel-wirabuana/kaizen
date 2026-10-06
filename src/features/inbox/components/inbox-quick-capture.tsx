@@ -34,28 +34,26 @@ export function InboxQuickCapture({
       onSubmit={handleSubmit}
       className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
     >
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
-        <Plus className="size-4" />
-      </div>
-
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Capture a thought, note, or item into inbox..."
+        placeholder="Capture a thought, note, or item into zenbox..."
         disabled={disabled || isSubmitting}
         className="h-8 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0 md:text-xs"
       />
 
       <Button
         type="submit"
-        size="sm"
+        size="icon"
         disabled={disabled || isSubmitting || !name.trim()}
-        className="h-7 shrink-0 gap-1.5 px-3 text-xs cursor-pointer"
+        className="h-7 shrink-0 cursor-pointer gap-1.5 px-3 text-xs"
       >
         {isSubmitting ? (
           <Loader2 className="size-3 animate-spin" />
         ) : (
-          <span>Capture</span>
+          <span>
+            <Plus />
+          </span>
         )}
       </Button>
     </form>

@@ -68,8 +68,8 @@ export function SettingsPage() {
             <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">d</kbd>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">Navigate to Inbox</span>
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">g then i</kbd>
+            <span className="text-muted-foreground">Navigate to Zenbox</span>
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px]">g then z</kbd>
           </div>
           <div className="flex items-center justify-between py-2">
             <span className="text-muted-foreground">Quick Action Command Menu</span>

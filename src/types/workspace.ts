@@ -1,6 +1,6 @@
 export interface WorkspaceSettings {
   timezone?: string
-  default_view?: "boards" | "calendars" | "inbox" | string
+  default_view?: "boards" | "calendars" | "zenbox" | "inbox" | string
   [key: string]: unknown
 }
 

@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from "react"
+import { useLocation, useRoute } from "wouter"
 import { useUser } from "@clerk/clerk-react"
 import { useActiveWorkspace } from "@/stores/workspace-store"
 import {
   useZenStore,
   useFilteredZens,
-  useSelectedZen,
   useZenCount,
   type InboxFolder,
 } from "@/stores/zen-store"
@@ -20,14 +20,25 @@ import {
 import type { Zen, UpdateZenInput } from "@/types/zen"
 
 export function useInboxZens() {
+  const [, setLocation] = useLocation()
+  const [isZenboxIdRoute, zenboxParams] = useRoute<{ id: string }>("/zenbox/:id")
+  const [isInboxIdRoute, inboxParams] = useRoute<{ id: string }>("/inbox/:id")
+
+  const rawRouteId = isZenboxIdRoute
+    ? zenboxParams?.id
+    : isInboxIdRoute
+      ? inboxParams?.id
+      : null
+  const parsedId = rawRouteId ? Number.parseInt(rawRouteId, 10) : null
+  const selectedZenId =
+    parsedId !== null && !Number.isNaN(parsedId) ? parsedId : null
+
   const { user } = useUser()
   const activeWorkspace = useActiveWorkspace()
   const workspaceId = activeWorkspace?.id
 
   const zens = useZenStore((state) => state.zens)
   const filteredZens = useFilteredZens()
-  const selectedZen = useSelectedZen()
-  const selectedZenId = useZenStore((state) => state.selectedZenId)
   const activeFolder = useZenStore((state) => state.activeFolder)
   const showUnreadOnly = useZenStore((state) => state.showUnreadOnly)
   const zenCount = useZenCount()
@@ -35,8 +46,16 @@ export function useInboxZens() {
   const isLoading = useZenStore((state) => state.isLoading)
   const error = useZenStore((state) => state.error)
 
+  const selectedZen = selectedZenId
+    ? zens.find((z) => z.id === selectedZenId) ?? null
+    : null
+
+  // Keep Zustand store selectedZenId synchronized with URL
+  useEffect(() => {
+    useZenStore.setState({ selectedZenId })
+  }, [selectedZenId])
+
   const setZens = useZenStore((state) => state.setZens)
-  const setSelectedZenId = useZenStore((state) => state.setSelectedZenId)
   const setActiveFolder = useZenStore((state) => state.setActiveFolder)
   const setShowUnreadOnly = useZenStore((state) => state.setShowUnreadOnly)
   const upsertZen = useZenStore((state) => state.upsertZen)
@@ -59,7 +78,7 @@ export function useInboxZens() {
       setZens(data)
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to load inbox items"
+        err instanceof Error ? err.message : "Failed to load zenbox items"
       setError(message)
     }
   }, [workspaceId, resetStore, setIsLoading, setZens, setError])
@@ -111,7 +130,7 @@ export function useInboxZens() {
     })
 
     upsertZen(newZen)
-    setSelectedZenId(newZen.id)
+    setLocation(`/zenbox/${newZen.id}`)
     return newZen
   }
 
@@ -134,6 +153,9 @@ export function useInboxZens() {
       if (existing) {
         upsertZen({ ...existing, archived_at: new Date().toISOString() })
       }
+      if (activeFolder === "zenbox" && selectedZenId === id) {
+        setLocation("/zenbox")
+      }
     }
     return success
   }
@@ -146,6 +168,9 @@ export function useInboxZens() {
       if (existing) {
         upsertZen({ ...existing, archived_at: null })
       }
+      if (activeFolder === "archived" && selectedZenId === id) {
+        setLocation("/zenbox")
+      }
     }
     return success
   }
@@ -155,9 +180,39 @@ export function useInboxZens() {
     const success = await deleteZenRecord(id)
     if (success) {
       removeZen(id)
+      if (selectedZenId === id) {
+        setLocation("/zenbox")
+      }
     }
     return success
   }
+
+  const navigateToZen = useCallback(
+    (id: number | null) => {
+      if (id !== null) {
+        setLocation(`/zenbox/${id}`)
+      } else {
+        setLocation("/zenbox")
+      }
+    },
+    [setLocation]
+  )
+
+  const handleSelectFolder = useCallback(
+    (folder: InboxFolder) => {
+      setActiveFolder(folder)
+      if (selectedZen) {
+        const isStillVisible =
+          folder === "zenbox"
+            ? !selectedZen.archived_at
+            : Boolean(selectedZen.archived_at)
+        if (!isStillVisible) {
+          setLocation("/zenbox")
+        }
+      }
+    },
+    [selectedZen, setActiveFolder, setLocation]
+  )
 
   return {
     zens,
@@ -175,10 +230,12 @@ export function useInboxZens() {
     archiveZen,
     restoreZen,
     deleteZen,
-    setSelectedZenId,
-    setActiveFolder: (folder: InboxFolder) => setActiveFolder(folder),
+    setSelectedZenId: navigateToZen,
+    setActiveFolder: handleSelectFolder,
     setShowUnreadOnly,
     setSearchQuery,
     refreshZens,
   }
 }
+
+export { useInboxZens as useZenboxZens }

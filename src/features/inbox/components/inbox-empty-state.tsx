@@ -27,7 +27,7 @@ export function InboxEmptyState({ isSearch }: InboxEmptyStateProps) {
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle className="text-base font-semibold">
-            {isSearch ? "No items found" : "Inbox Zero"}
+            {isSearch ? "No items found" : "Zenbox Zero"}
           </EmptyTitle>
           <EmptyDescription className="text-xs text-muted-foreground text-balance">
             {isSearch

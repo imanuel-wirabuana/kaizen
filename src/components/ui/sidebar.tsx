@@ -78,14 +78,15 @@ function SidebarProvider({
       const openState = typeof value === "function" ? value(open) : value
       if (setOpenProp) {
         setOpenProp(openState)
-      } else {
+      }
+      if (openProp === undefined) {
         _setOpen(openState)
       }
 
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
-    [setOpenProp, open]
+    [setOpenProp, open, openProp]
   )
 
   // Helper to toggle the sidebar.

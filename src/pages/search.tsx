@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 interface SearchResult {
   id: string
   title: string
-  type: "inbox" | "board" | "note" | "calendar"
+  type: "zenbox" | "inbox" | "board" | "note" | "calendar"
   snippet: string
   link: string
   time: string
@@ -24,9 +24,9 @@ const SEARCH_DATABASE: SearchResult[] = [
   {
     id: "s1",
     title: "Review quarterly sprint goals and backlog priorities",
-    type: "inbox",
-    snippet: "High priority inbox task for upcoming quarter milestones.",
-    link: "/inbox",
+    type: "zenbox",
+    snippet: "High priority zenbox task for upcoming quarter milestones.",
+    link: "/zenbox",
     time: "Today",
   },
   {
@@ -112,14 +112,14 @@ export function SearchPage() {
         </button>
         <button
           type="button"
-          onClick={() => setFilterType("inbox")}
+          onClick={() => setFilterType("zenbox")}
           className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-            filterType === "inbox"
+            filterType === "zenbox"
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
           }`}
         >
-          Inbox
+          Zenbox
         </button>
         <button
           type="button"
@@ -175,7 +175,7 @@ export function SearchPage() {
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-md bg-muted text-primary shrink-0 mt-0.5">
-                  {result.type === "inbox" && <Inbox className="size-4" />}
+                  {(result.type === "zenbox" || result.type === "inbox") && <Inbox className="size-4" />}
                   {result.type === "board" && <KanbanSquare className="size-4" />}
                   {result.type === "note" && <BookOpenText className="size-4" />}
                   {result.type === "calendar" && <Calendar className="size-4" />}
