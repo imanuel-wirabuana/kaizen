@@ -43,9 +43,11 @@ export function App() {
 
               {/* boards */}
               <Route path="/boards" component={BoardPage} />
+              <Route path="/boards/:id" component={BoardPage} />
 
               {/* calendar */}
               <Route path="/calendars" component={CalendarPage} />
+              <Route path="/calendars/:id" component={CalendarPage} />
 
               {/* assistant */}
               <Route path="/assistant" component={AssistantPage} />

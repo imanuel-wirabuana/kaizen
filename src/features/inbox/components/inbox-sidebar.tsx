@@ -55,34 +55,38 @@ export function InboxSidebar({
     <>
       {/* Sidebar Header: Infused Folder Nav + Collapse Button + Search/Filter + Quick Capture */}
       <SidebarHeader className="flex shrink-0 flex-col gap-2 border-b border-border bg-sidebar/30 p-2">
-        <div className="flex items-center gap-1.5">
-          <div className="min-w-0 flex-1">
-            <InboxNav
-              activeFolder={activeFolder}
-              onSelectFolder={onSelectFolder}
-              zenboxCount={zenboxCount}
-              archivedCount={archivedCount}
-            />
-          </div>
-        </div>
+        {/* Batch Action Bar: Displayed when 1+ items are selected */}
+        {selectedBatchIds.length > 0 ? (
+          <InboxBatchActionBar
+            selectedIds={selectedBatchIds}
+            totalItemsCount={zens.length}
+            activeFolder={activeFolder}
+            onSelectAll={onSelectAllBatch ?? (() => {})}
+            onClearSelection={onClearBatchSelect ?? (() => {})}
+            onBatchArchive={onBatchArchive ?? (async () => {})}
+            onBatchRestore={onBatchRestore ?? (async () => {})}
+            onBatchDelete={onBatchDelete ?? (async () => {})}
+            onBatchArchiveAndDelete={
+              onBatchArchiveAndDelete ?? (async () => {})
+            }
+          />
+        ) : (
+          <>
+            <div className="flex items-center gap-1.5">
+              <div className="min-w-0 flex-1">
+                <InboxNav
+                  activeFolder={activeFolder}
+                  onSelectFolder={onSelectFolder}
+                  zenboxCount={zenboxCount}
+                  archivedCount={archivedCount}
+                />
+              </div>
+            </div>
 
-        <InboxQuickCapture onCapture={onCapture} />
+            <InboxQuickCapture onCapture={onCapture} />
+          </>
+        )}
       </SidebarHeader>
-
-      {/* Batch Action Bar: Displayed when 1+ items are selected */}
-      {selectedBatchIds.length > 0 && (
-        <InboxBatchActionBar
-          selectedIds={selectedBatchIds}
-          totalItemsCount={zens.length}
-          activeFolder={activeFolder}
-          onSelectAll={onSelectAllBatch ?? (() => {})}
-          onClearSelection={onClearBatchSelect ?? (() => {})}
-          onBatchArchive={onBatchArchive ?? (async () => {})}
-          onBatchRestore={onBatchRestore ?? (async () => {})}
-          onBatchDelete={onBatchDelete ?? (async () => {})}
-          onBatchArchiveAndDelete={onBatchArchiveAndDelete ?? (async () => {})}
-        />
-      )}
 
       {/* Sidebar Menu: Zen Items List */}
       <SidebarContent className="min-h-0 flex-1 overflow-hidden p-0">

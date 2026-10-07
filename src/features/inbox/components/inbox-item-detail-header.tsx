@@ -68,7 +68,7 @@ export function InboxItemDetailHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-sidebar/30 p-1 px-3 backdrop-blur-xs",
+        "sticky top-0 z-20 flex min-h-11 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 p-1 px-3 backdrop-blur-xs",
         className
       )}
     >

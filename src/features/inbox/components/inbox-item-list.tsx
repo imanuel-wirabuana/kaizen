@@ -110,7 +110,7 @@ export function InboxItemList({
           >
             <div
               className={cn(
-                "flex w-full items-start gap-2 p-2.5 text-left text-sm leading-tight transition-colors select-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "group relative flex w-full items-start gap-2 p-2.5 text-left text-sm leading-tight transition-colors select-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 isSelected &&
                   "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
                 isBatchSelected &&
@@ -119,18 +119,31 @@ export function InboxItemList({
             >
               {/* Standalone Checkbox Area */}
               <div
-                onClick={(e) => e.stopPropagation()}
+                role="checkbox"
+                tabIndex={0}
+                aria-checked={isBatchSelected}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleBatchSelect(zen.id)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleBatchSelect(zen.id)
+                  }
+                }}
                 className={cn(
-                  "mt-0.5 hidden shrink-0 items-center justify-center",
+                  "mt-0.5 flex size-4 cursor-pointer items-center justify-center transition-opacity",
                   isBatchMode || isBatchSelected
-                    ? "flex"
-                    : "hidden group-hover/item:flex"
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
                 )}
               >
                 <Checkbox
                   checked={isBatchSelected}
-                  onCheckedChange={() => toggleBatchSelect(zen.id)}
-                  className="size-3.5 cursor-pointer border-primary"
+                  tabIndex={-1}
+                  className="size-3.5 pointer-events-none border-primary"
                   aria-label={`Select ${zen.name}`}
                 />
               </div>

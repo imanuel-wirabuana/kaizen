@@ -12,22 +12,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
-import type { ZenboxFolder } from "@/stores/zen-store"
+import type { CalendarFolder } from "@/types/calendar"
 
-export interface InboxBatchActionBarProps {
+export interface CalendarBatchActionBarProps {
   selectedIds: number[]
   totalItemsCount: number
-  activeFolder: ZenboxFolder
+  activeFolder: CalendarFolder
   onSelectAll: () => void
   onClearSelection: () => void
   onBatchArchive: (ids: number[]) => Promise<unknown>
   onBatchRestore: (ids: number[]) => Promise<unknown>
   onBatchDelete: (ids: number[]) => Promise<unknown>
-  onBatchArchiveAndDelete: (ids: number[]) => Promise<unknown>
   className?: string
 }
 
-export function InboxBatchActionBar({
+export function CalendarBatchActionBar({
   selectedIds,
   totalItemsCount,
   activeFolder,
@@ -36,9 +35,8 @@ export function InboxBatchActionBar({
   onBatchArchive,
   onBatchRestore,
   onBatchDelete,
-  onBatchArchiveAndDelete,
   className,
-}: InboxBatchActionBarProps) {
+}: CalendarBatchActionBarProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
 
@@ -95,11 +93,7 @@ export function InboxBatchActionBar({
     if (isProcessing) return
     try {
       setIsProcessing(true)
-      if (activeFolder === "zenbox") {
-        await onBatchArchiveAndDelete(selectedIds)
-      } else {
-        await onBatchDelete(selectedIds)
-      }
+      await onBatchDelete(selectedIds)
       setIsConfirmOpen(false)
     } finally {
       setIsProcessing(false)
@@ -132,7 +126,7 @@ export function InboxBatchActionBar({
                   type="button"
                   onClick={onSelectAll}
                   className="cursor-pointer text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
-                  title={`Select all ${totalItemsCount} items`}
+                  title={`Select all ${totalItemsCount} calendars`}
                 >
                   (All {totalItemsCount})
                 </button>
@@ -155,13 +149,14 @@ export function InboxBatchActionBar({
 
         {/* Tier 2: Dedicated Batch Actions Grid */}
         <div className="w-full">
-          {activeFolder === "zenbox" ? (
+          {activeFolder !== "archived" ? (
+            /* Active folder: Delete forbidden - must archive first */
             <Button
               size="sm"
               onClick={handleArchive}
               disabled={isProcessing}
               className="h-8 w-full cursor-pointer gap-1.5 px-2 text-xs font-medium shadow-2xs"
-              title={`Archive ${selectedIds.length} items`}
+              title={`Archive ${selectedIds.length} calendars`}
             >
               {isProcessing ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -171,6 +166,7 @@ export function InboxBatchActionBar({
               <span>Archive</span>
             </Button>
           ) : (
+            /* Archived folder: Restore or Permanent Delete allowed */
             <div className="grid w-full grid-cols-2 gap-1.5">
               {/* Batch Restore */}
               <Button
@@ -178,7 +174,7 @@ export function InboxBatchActionBar({
                 onClick={handleRestore}
                 disabled={isProcessing}
                 className="h-8 cursor-pointer gap-1.5 px-2 text-xs font-medium shadow-2xs"
-                title={`Restore ${selectedIds.length} items`}
+                title={`Restore ${selectedIds.length} calendars`}
               >
                 {isProcessing ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -195,7 +191,7 @@ export function InboxBatchActionBar({
                 onClick={() => setIsConfirmOpen(true)}
                 disabled={isProcessing}
                 className="h-8 cursor-pointer gap-1.5 border-destructive/20 px-2 text-xs font-medium text-destructive shadow-2xs hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                title={`Delete ${selectedIds.length} items`}
+                title={`Delete ${selectedIds.length} calendars`}
               >
                 <Trash2 className="size-3.5" />
                 <span>Delete</span>
@@ -211,16 +207,12 @@ export function InboxBatchActionBar({
           <AlertDialogHeader>
             <AlertDialogTitle>
               Permanently delete {selectedIds.length}{" "}
-              {selectedIds.length === 1 ? "item" : "items"}?
+              {selectedIds.length === 1 ? "calendar" : "calendars"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {activeFolder === "zenbox"
-                ? `This will archive and permanently remove the selected ${selectedIds.length} ${
-                    selectedIds.length === 1 ? "item" : "items"
-                  } from your workspace. This action cannot be undone.`
-                : `This will permanently remove the selected ${selectedIds.length} ${
-                    selectedIds.length === 1 ? "item" : "items"
-                  } from your workspace. This action cannot be undone.`}
+              This will permanently remove the selected {selectedIds.length}{" "}
+              {selectedIds.length === 1 ? "calendar" : "calendars"} from your workspace.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -236,7 +228,7 @@ export function InboxBatchActionBar({
               {isProcessing && <Loader2 className="size-3.5 animate-spin" />}
               <span>
                 Delete {selectedIds.length}{" "}
-                {selectedIds.length === 1 ? "item" : "items"}
+                {selectedIds.length === 1 ? "calendar" : "calendars"}
               </span>
             </Button>
           </AlertDialogFooter>
@@ -246,4 +238,4 @@ export function InboxBatchActionBar({
   )
 }
 
-export default InboxBatchActionBar
+export default CalendarBatchActionBar
