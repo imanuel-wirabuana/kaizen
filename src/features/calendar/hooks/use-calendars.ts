@@ -23,7 +23,7 @@ import {
   subscribeToCalendarChanges,
 } from "@/features/calendar/services/calendar-service"
 import { calendarKeys } from "@/features/calendar/services/calendar-keys"
-import type { Calendar, UpdateCalendarInput } from "@/types/calendar"
+import type { Calendar, CalendarFolder, UpdateCalendarInput } from "@/types/calendar"
 
 const EMPTY_CALENDARS: Calendar[] = []
 

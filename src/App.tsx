@@ -4,7 +4,6 @@ import { RootLayout } from "@/components/layout/root-layout"
 import { Toaster } from "@/components/ui/toast"
 import { DashboardPage } from "@/pages/dashboard"
 import { InboxPage } from "@/pages/inbox"
-import { SearchPage } from "@/pages/search"
 import { BoardPage } from "@/pages/board"
 import { CalendarPage } from "@/pages/calendar"
 import { AssistantPage } from "@/pages/assistant"
@@ -35,7 +34,9 @@ export function App() {
           <RootLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
-              <Route path="/search" component={SearchPage} />
+              <Route path="/search">
+                <Redirect to="/" />
+              </Route>
 
               {/* zenbox */}
               <Route path="/zenbox" component={InboxPage} />

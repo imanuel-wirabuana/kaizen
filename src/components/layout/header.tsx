@@ -94,8 +94,8 @@ export function Header({
               size="icon-xs"
               onClick={handleSearchClick}
               className="text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
-              title="Search"
-              aria-label="Search"
+              title="Search (⌘K)"
+              aria-label="Search (⌘K)"
             >
               <Search className="size-3.5" />
             </Button>

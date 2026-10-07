@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Link, useLocation } from "wouter"
 import { NavUser } from "@/components/layout/nav-user"
 import { Header } from "@/components/layout/header"
@@ -6,6 +6,7 @@ import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { WorkspaceCommandDialog } from "@/features/workspaces/components/workspace-command-dialog"
 import { CreateWorkspaceDialog } from "@/features/workspaces/components/create-workspace-dialog"
 import { WorkspaceEmptyState } from "@/features/workspaces/components/workspace-empty-state"
+import { SearchCommandDialog } from "@/features/search/components/search-command-dialog"
 import {
   BotMessageSquare,
   Calendar,
@@ -15,7 +16,6 @@ import {
   KanbanSquare,
   Loader2,
   Plus,
-  Search,
   Settings,
   Users,
 } from "lucide-react"
@@ -63,8 +63,21 @@ function SidebarNavItem({ href, icon: Icon, title }: NavItemProps) {
 export function RootLayout({ children }: { children: ReactNode }) {
   const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
 
   const { workspaces, activeWorkspace, isLoading } = useWorkspaces()
+
+  // Cmd+K / Ctrl+K keyboard shortcut to open Search Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        setSearchDialogOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   const hasWorkspaces = workspaces.length > 0
   const workspaceInitial = activeWorkspace?.name
@@ -119,11 +132,6 @@ export function RootLayout({ children }: { children: ReactNode }) {
                   <SidebarGroupContent>
                     <SidebarMenu>
                       <SidebarNavItem href="/" icon={Home} title="Dashboard" />
-                      <SidebarNavItem
-                        href="/search"
-                        icon={Search}
-                        title="Search"
-                      />
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -186,7 +194,10 @@ export function RootLayout({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <SidebarInset className="flex h-svh max-h-svh min-h-0 flex-1 flex-col overflow-hidden">
-          <Header onWorkspaceClick={handleHeaderButtonClick} />
+          <Header
+            onWorkspaceClick={handleHeaderButtonClick}
+            onSearchClick={() => setSearchDialogOpen(true)}
+          />
 
           <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-0">
             {isLoading ? (
@@ -206,6 +217,12 @@ export function RootLayout({ children }: { children: ReactNode }) {
           </main>
         </SidebarInset>
       </SidebarProvider>
+
+      <SearchCommandDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+        onOpenWorkspaceDialog={() => setWorkspaceDialogOpen(true)}
+      />
 
       <WorkspaceCommandDialog
         open={workspaceDialogOpen}
