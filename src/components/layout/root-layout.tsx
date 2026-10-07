@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { Link, useLocation } from "wouter"
 import { NavUser } from "@/components/layout/nav-user"
+import { Header } from "@/components/layout/header"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { WorkspaceCommandDialog } from "@/features/workspaces/components/workspace-command-dialog"
 import { CreateWorkspaceDialog } from "@/features/workspaces/components/create-workspace-dialog"
@@ -185,14 +186,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <SidebarInset className="flex h-svh max-h-svh min-h-0 flex-1 flex-col overflow-hidden">
-          <header className="sticky top-0 z-50 flex shrink-0 items-center justify-center border-b border-border bg-sidebar p-1 text-xs font-semibold text-muted-foreground">
-            <span>
-              Kaizen
-              {hasWorkspaces && activeWorkspace?.name
-                ? ` • ${activeWorkspace.name}`
-                : ""}
-            </span>
-          </header>
+          <Header onWorkspaceClick={handleHeaderButtonClick} />
 
           <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-0">
             {isLoading ? (
