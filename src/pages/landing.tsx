@@ -60,7 +60,7 @@ export function LandingPage() {
           {/* Action CTAs */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
             <SignedOut>
-              <SignInButton mode="modal">
+              <SignInButton mode="modal" fallbackRedirectUrl="/">
                 <Button
                   size="lg"
                   className="h-11 gap-2 px-7 text-sm font-medium shadow-md"
