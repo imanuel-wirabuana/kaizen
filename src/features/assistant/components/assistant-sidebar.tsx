@@ -15,7 +15,8 @@ export interface AssistantSidebarProps {
   onSelectFolder: (folder: AssistantFolder) => void
   activeCount: number
   archivedCount: number
-  onCreateThread: (title?: string) => Promise<AiThread | void>
+  canCreate?: boolean
+  onCreateThread?: (title?: string) => Promise<AiThread | void>
   threads: AiThread[]
   selectedThreadId: number | null
   onSelectThread: (id: number) => void
@@ -34,6 +35,7 @@ export function AssistantSidebar({
   onSelectFolder,
   activeCount,
   archivedCount,
+  canCreate = true,
   onCreateThread,
   threads,
   selectedThreadId,
@@ -85,7 +87,9 @@ export function AssistantSidebar({
               </div>
             </div>
 
-            <AssistantQuickCreate onCreate={onCreateThread} />
+            {canCreate && onCreateThread && (
+              <AssistantQuickCreate onCreate={onCreateThread} />
+            )}
           </>
         )}
       </SidebarHeader>

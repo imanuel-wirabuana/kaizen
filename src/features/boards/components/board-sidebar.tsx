@@ -15,7 +15,8 @@ export interface BoardSidebarProps {
   onSelectFolder: (folder: BoardFolder) => void
   allCount: number
   archivedCount: number
-  onCreateBoard: (name?: string) => Promise<Board | void>
+  canCreate?: boolean
+  onCreateBoard?: (name?: string) => Promise<Board | void>
   boards: Board[]
   selectedBoardId: number | null
   onSelectBoard: (id: number) => void
@@ -34,6 +35,7 @@ export function BoardSidebar({
   onSelectFolder,
   allCount,
   archivedCount,
+  canCreate = true,
   onCreateBoard,
   boards,
   selectedBoardId,
@@ -85,7 +87,9 @@ export function BoardSidebar({
               </div>
             </div>
 
-            <BoardQuickCreate onCreate={onCreateBoard} />
+            {canCreate !== false && onCreateBoard && (
+              <BoardQuickCreate onCreate={onCreateBoard} />
+            )}
           </>
         )}
       </SidebarHeader>

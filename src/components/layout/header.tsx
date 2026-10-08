@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react"
 import { useLocation } from "wouter"
-import { Bot, ChevronDown, Search } from "lucide-react"
+import { Bot, ChevronDown, Search, UserPlus } from "lucide-react"
 import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { useWorkspaceStore, useActiveWorkspace } from "@/stores/workspace-store"
@@ -14,8 +14,12 @@ export interface HeaderProps extends ComponentProps<"header"> {
   onSearchClick?: () => void
   /** Callback triggered when clicking the assistant button */
   onAssistantClick?: () => void
+  /** Callback triggered when clicking the join workspace button */
+  onJoinClick?: () => void
   /** Whether the assistant right sidebar is currently open */
   isAssistantOpen?: boolean
+  /** Whether user can access assistant */
+  canAccessAssistant?: boolean
 }
 
 export function Header({
@@ -24,7 +28,9 @@ export function Header({
   onWorkspaceClick,
   onSearchClick,
   onAssistantClick,
+  onJoinClick,
   isAssistantOpen = false,
+  canAccessAssistant = true,
   children,
   ...props
 }: HeaderProps) {
@@ -89,8 +95,22 @@ export function Header({
             Kaizen
           </div>
 
-          {/* Right: Search & Assistant buttons */}
+          {/* Right: Join Workspace, Search & Assistant buttons */}
           <div className="flex shrink-0 items-center justify-end gap-1">
+            {onJoinClick && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={onJoinClick}
+                className="cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Join Workspace with Code"
+                aria-label="Join Workspace with Code"
+              >
+                <UserPlus className="size-3.5" />
+              </Button>
+            )}
+
             <Button
               type="button"
               variant="ghost"
@@ -103,7 +123,7 @@ export function Header({
               <Search className="size-3.5" />
             </Button>
 
-            {onAssistantClick && (
+            {onAssistantClick && canAccessAssistant && (
               <Button
                 type="button"
                 variant="ghost"

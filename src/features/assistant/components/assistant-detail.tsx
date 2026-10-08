@@ -14,9 +14,10 @@ export interface AssistantDetailProps {
   selectedThreadId?: number | null
   modelName: string
   onModelChange: (model: string) => Promise<unknown> | void
-  onArchive: (id: number) => Promise<unknown>
-  onRestore: (id: number) => Promise<unknown>
-  onDelete: (id: number) => Promise<unknown>
+  canCreate?: boolean
+  onArchive?: (id: number) => Promise<unknown>
+  onRestore?: (id: number) => Promise<unknown>
+  onDelete?: (id: number) => Promise<unknown>
   onBackToAssistant?: () => void
 }
 
@@ -26,6 +27,7 @@ export function AssistantDetail({
   selectedThreadId = null,
   modelName,
   onModelChange,
+  canCreate = true,
   onArchive,
   onRestore,
   onDelete,
@@ -52,9 +54,9 @@ export function AssistantDetail({
     if (!thread || isProcessing) return
     try {
       setIsProcessing(true)
-      if (thread.archived_at) {
+      if (thread.archived_at && onRestore) {
         await onRestore(thread.id)
-      } else {
+      } else if (!thread.archived_at && onArchive) {
         await onArchive(thread.id)
       }
     } finally {
@@ -63,7 +65,7 @@ export function AssistantDetail({
   }
 
   const handleDelete = async () => {
-    if (!thread || isProcessing) return
+    if (!thread || isProcessing || !onDelete) return
     try {
       setIsProcessing(true)
       await onDelete(thread.id)
@@ -78,9 +80,13 @@ export function AssistantDetail({
       <AssistantDetailHeader
         thread={thread}
         isProcessing={isProcessing}
-        onToggleArchive={thread ? handleToggleArchive : undefined}
+        onToggleArchive={
+          thread && (thread.archived_at ? onRestore : onArchive)
+            ? handleToggleArchive
+            : undefined
+        }
         onClearMessages={thread ? clearMessages : undefined}
-        onDelete={thread ? handleDelete : undefined}
+        onDelete={thread && onDelete ? handleDelete : undefined}
       />
 
       {/* Main Detail Body */}
@@ -143,6 +149,7 @@ export function AssistantDetail({
                 isStreaming={isStreaming}
                 streamedContent={streamedContent}
                 onSelectPrompt={(prompt) => void sendMessage(prompt)}
+                modelName={effectiveModel}
                 userName={user?.fullName || "You"}
                 userImageUrl={user?.imageUrl}
               />
@@ -156,6 +163,7 @@ export function AssistantDetail({
               modelName={effectiveModel}
               onModelChange={onModelChange}
               isArchived={Boolean(thread.archived_at)}
+              disabled={!canCreate}
               placeholder={`Message ${effectiveModel || "assistant"}...`}
             />
           </div>

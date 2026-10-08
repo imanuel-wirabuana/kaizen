@@ -1,318 +1,314 @@
 import { useState } from "react"
-import { useUser } from "@clerk/clerk-react"
-import { Mail, Plus, Search, Shield, UserCheck, Users } from "lucide-react"
+import {
+  Plus,
+  Search,
+  UserCheck,
+  Users,
+  Link2,
+  Building2,
+  X,
+  RotateCw,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/toast"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { useActiveWorkspace } from "@/stores/workspace-store"
-
-interface Member {
-  id: string
-  name: string
-  email: string
-  role: "Owner" | "Admin" | "Member"
-  status: "Active" | "Pending"
-  avatar: string
-  isCurrentUser?: boolean
-}
-
-const DEFAULT_MEMBERS: Member[] = [
-  {
-    id: "m2",
-    name: "Sarah Chen",
-    email: "sarah@kaizen.app",
-    role: "Admin",
-    status: "Active",
-    avatar: "SC",
-  },
-  {
-    id: "m3",
-    name: "Marcus Miller",
-    email: "marcus@kaizen.app",
-    role: "Member",
-    status: "Active",
-    avatar: "MM",
-  },
-  {
-    id: "m4",
-    name: "Elena Rostova",
-    email: "elena@kaizen.app",
-    role: "Member",
-    status: "Pending",
-    avatar: "ER",
-  },
-]
+import { useWorkspaceMembers } from "@/features/members/hooks/use-workspace-members"
+import { useWorkspaceInvites } from "@/features/members/hooks/use-workspace-invites"
+import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
+import { MembersTable } from "@/features/members/components/members-table"
+import { InvitesTable } from "@/features/members/components/invites-table"
+import { GenerateInviteDialog } from "@/features/members/components/generate-invite-dialog"
+import { AccessDeniedState } from "@/features/members/components/access-denied-state"
 
 export function MembersPage() {
-  const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
+  const {
+    members,
+    activeWorkspace,
+    isLoading: isMembersLoading,
+    revokeMember,
+    refreshMembers,
+  } = useWorkspaceMembers()
+
+  const {
+    invites,
+    isLoading: isInvitesLoading,
+    createInvite,
+    revokeInvite,
+    isCreating,
+    refreshInvites,
+  } = useWorkspaceInvites()
+
+  const { canRead, canCreate, canUpdate, canDelete, isLoading: isPermsLoading } =
+    useWorkspacePermissions()
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState<"Admin" | "Member">("Member")
-  const [membersList, setMembersList] = useState<Member[]>(DEFAULT_MEMBERS)
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
+  const [referenceTime] = useState(() => Date.now())
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const currentUserMember: Member = {
-    id: "current-user",
-    name: user?.fullName || user?.username || "Workspace Owner",
-    email: user?.primaryEmailAddress?.emailAddress || "owner@kaizen.app",
-    role: "Owner",
-    status: "Active",
-    avatar:
-      user?.firstName && user?.lastName
-        ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-        : "ME",
-    isCurrentUser: true,
+  // Route Access Guard: If user cannot read members
+  if (!isPermsLoading && !canRead("members")) {
+    return (
+      <AccessDeniedState
+        resource="Team Members"
+        description="You do not have permission to view members and invitations in this workspace."
+      />
+    )
   }
 
-  const allMembers = [currentUserMember, ...membersList]
+  const activeMembersCount = members.filter((m) => !m.revokedAt).length
+  const activeInvitesCount = invites.filter(
+    (i) =>
+      !i.revoked_at &&
+      (!i.expired_at || new Date(i.expired_at).getTime() > referenceTime) &&
+      (i.max_uses === 0 || i.use_count < i.max_uses)
+  ).length
 
-  const filteredMembers = allMembers.filter((m) => {
-    const q = searchQuery.toLowerCase().trim()
-    if (!q) return true
-    return m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
-  })
-
-  const totalMembers = allMembers.length
-  const activeCollaborators = allMembers.filter((m) => m.status === "Active").length
-
-  const handleSendInvite = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
-      toast.error("Invalid email", {
-        description: "Please enter a valid email address.",
-      })
-      return
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([refreshMembers(), refreshInvites()])
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500)
     }
-
-    const initials = inviteEmail.slice(0, 2).toUpperCase()
-    const newMember: Member = {
-      id: `m-${Date.now()}`,
-      name: inviteEmail.split("@")[0],
-      email: inviteEmail.trim(),
-      role: inviteRole,
-      status: "Pending",
-      avatar: initials,
-    }
-
-    setMembersList((prev) => [...prev, newMember])
-    setInviteDialogOpen(false)
-    setInviteEmail("")
-
-    toast.success("Invitation sent", {
-      description: `Invited ${newMember.email} as ${newMember.role} to ${activeWorkspace?.name || "Kaizen"}.`,
-    })
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full p-4">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Members</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your workspace collaborators, roles, and invitations for{" "}
-            <span className="font-medium text-foreground">
-              {activeWorkspace?.name || "Kaizen"}
-            </span>
-            .
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 pb-16">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-5">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="text-[11px] font-normal gap-1.5 px-2 py-0.5 bg-muted/40 border-border/70 text-muted-foreground"
+            >
+              <Building2 className="size-3 text-muted-foreground/80" />
+              <span className="font-medium text-foreground">
+                {activeWorkspace?.name || "Kaizen Workspace"}
+              </span>
+            </Badge>
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Team & Collaborators
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Manage your workspace members, assign granular permissions, and track active invitation links.
           </p>
         </div>
 
-        <Button
-          onClick={() => setInviteDialogOpen(true)}
-          className="gap-2 self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="size-4" />
-          <span>Invite Member</span>
-        </Button>
-      </div>
-
-      {/* Members Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <span className="text-xs text-muted-foreground font-medium">
-              Total Members
-            </span>
-            <p className="text-2xl font-bold mt-1">{totalMembers}</p>
-          </div>
-          <div className="p-2 rounded-md bg-muted text-primary">
-            <Users className="size-4" />
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <span className="text-xs text-muted-foreground font-medium">
-              Active Collaborators
-            </span>
-            <p className="text-2xl font-bold mt-1">{activeCollaborators}</p>
-          </div>
-          <div className="p-2 rounded-md bg-muted text-primary">
-            <UserCheck className="size-4" />
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <span className="text-xs text-muted-foreground font-medium">
-              Workspace Seats
-            </span>
-            <p className="text-2xl font-bold mt-1">{totalMembers} / 10</p>
-          </div>
-          <div className="p-2 rounded-md bg-muted text-primary">
-            <Shield className="size-4" />
-          </div>
-        </Card>
-      </div>
-
-      {/* Search & Members List */}
-      <Card className="overflow-hidden shadow-2xs border-border/80">
-        <div className="p-3 border-b border-border/50 bg-card">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search members by name or email..."
-              className="pl-9 h-9 text-xs bg-muted/30"
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isMembersLoading || isInvitesLoading}
+            className="cursor-pointer text-muted-foreground hover:text-foreground"
+            title="Refresh member data"
+          >
+            <RotateCw
+              className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`}
             />
-          </div>
-        </div>
+          </Button>
 
-        <div className="divide-y divide-border/50">
-          {filteredMembers.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              No team members match &ldquo;{searchQuery}&rdquo;.
-            </div>
-          ) : (
-            filteredMembers.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs shrink-0">
-                    {member.avatar}
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold">{member.name}</span>
-                      {member.isCurrentUser && (
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
-                          You
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Mail className="size-3" />
-                      <span>{member.email}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant={member.role === "Owner" ? "default" : "secondary"}
-                    className="text-xs"
-                  >
-                    {member.role}
-                  </Badge>
-                  <Badge
-                    variant={member.status === "Active" ? "outline" : "secondary"}
-                    className="text-xs font-normal"
-                  >
-                    {member.status}
-                  </Badge>
-                </div>
-              </div>
-            ))
+          {canCreate("members") && (
+            <Button
+              onClick={() => setGenerateDialogOpen(true)}
+              className="gap-2 cursor-pointer shadow-xs font-medium"
+              size="sm"
+            >
+              <Plus className="size-4" />
+              <span>Invite Member</span>
+            </Button>
           )}
         </div>
-      </Card>
+      </div>
 
-      {/* Invite Member Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSendInvite}>
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation link to collaborate on {activeWorkspace?.name || "Kaizen"}.
-              </DialogDescription>
-            </DialogHeader>
+      {/* Metrics Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        {/* Total Members */}
+        <Card className="p-4 flex items-center justify-between border-border/70 bg-card shadow-2xs hover:border-border transition-all">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              Total Members
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-foreground tracking-tight">
+                {members.length}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                in workspace
+              </span>
+            </div>
+          </div>
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+            <Users className="size-5" />
+          </div>
+        </Card>
 
-            <div className="flex flex-col gap-4 py-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="invite-email" className="text-xs font-medium text-foreground">
-                  Email Address
-                </label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="collaborator@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="text-xs"
-                  autoFocus
-                  required
-                />
+        {/* Active Collaborators */}
+        <Card className="p-4 flex items-center justify-between border-border/70 bg-card shadow-2xs hover:border-border transition-all">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              Active Access
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-foreground tracking-tight">
+                {activeMembersCount}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active
+              </span>
+            </div>
+          </div>
+          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 shrink-0">
+            <UserCheck className="size-5" />
+          </div>
+        </Card>
+
+        {/* Active Invites */}
+        <Card className="p-4 flex items-center justify-between border-border/70 bg-card shadow-2xs hover:border-border transition-all">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              Active Invites
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-2xl font-bold text-foreground tracking-tight">
+                {activeInvitesCount}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                pending use
+              </span>
+            </div>
+          </div>
+          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 shrink-0">
+            <Link2 className="size-5" />
+          </div>
+        </Card>
+      </div>
+
+      {/* 2-Column Responsive Layout (No Tabs) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Team Members (8 cols on lg, 7 on xl) */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+          <Card className="overflow-hidden border-border/80 shadow-2xs bg-card">
+            {/* Column Header with Title & Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:px-4 sm:py-3.5 border-b border-border/50 bg-muted/20">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Workspace Members
+                </h3>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 font-normal bg-muted text-muted-foreground"
+                >
+                  {members.length}
+                </Badge>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Role</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
+              {/* Search Member */}
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search members..."
+                  className="pl-8 pr-7 h-8 text-xs bg-background border-border/70"
+                />
+                {searchQuery && (
+                  <button
                     type="button"
-                    variant={inviteRole === "Member" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setInviteRole("Member")}
-                    className="text-xs cursor-pointer"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="Clear search"
                   >
-                    Member
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={inviteRole === "Admin" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setInviteRole("Admin")}
-                    className="text-xs cursor-pointer"
-                  >
-                    Admin
-                  </Button>
-                </div>
+                    <X className="size-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setInviteDialogOpen(false)}
-                className="cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="cursor-pointer">
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            {/* Members List */}
+            {isMembersLoading ? (
+              <div className="p-12 text-center text-xs text-muted-foreground">
+                Loading team members...
+              </div>
+            ) : (
+              <MembersTable
+                members={members}
+                searchQuery={searchQuery}
+                onClearSearch={() => setSearchQuery("")}
+                canUpdate={canUpdate("members")}
+                canDelete={canDelete("members")}
+                onRevokeMember={async (memberId) => {
+                  return revokeMember(memberId)
+                }}
+              />
+            )}
+          </Card>
+        </div>
+
+        {/* Right Column: Invitations (5 cols on lg, 4 on xl) */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
+          <Card className="overflow-hidden border-border/80 shadow-2xs bg-card">
+            {/* Column Header */}
+            <div className="flex items-center justify-between gap-3 p-3.5 sm:px-4 sm:py-3.5 border-b border-border/50 bg-muted/20">
+              <div className="flex items-center gap-2">
+                <Link2 className="size-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Invitations
+                </h3>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 font-normal bg-muted text-muted-foreground"
+                >
+                  {invites.length}
+                </Badge>
+              </div>
+
+              {canCreate("members") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGenerateDialogOpen(true)}
+                  className="h-7 text-xs px-2 gap-1 cursor-pointer hover:bg-muted"
+                >
+                  <Plus className="size-3" />
+                  <span>Invite</span>
+                </Button>
+              )}
+            </div>
+
+            {/* Invites List */}
+            {isInvitesLoading ? (
+              <div className="p-12 text-center text-xs text-muted-foreground">
+                Loading workspace invites...
+              </div>
+            ) : (
+              <InvitesTable
+                invites={invites}
+                canRevoke={canDelete("members")}
+                onRevoke={async (inviteId) => {
+                  return revokeInvite(inviteId)
+                }}
+              />
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Generate Invite Dialog */}
+      <GenerateInviteDialog
+        open={generateDialogOpen}
+        onOpenChange={setGenerateDialogOpen}
+        workspaceName={activeWorkspace?.name}
+        onGenerate={createInvite}
+        isGenerating={isCreating}
+      />
     </div>
   )
 }

@@ -53,6 +53,9 @@ export function BlockNoteEditor({
     }
   }, [theme])
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const lastAppliedContentRef = useRef<string>(initialContent || "")
+
   // Load initial HTML into blocks once on mount or when content is first provided
   useEffect(() => {
     if (!editor || initialLoadedRef.current) return
@@ -69,9 +72,44 @@ export function BlockNoteEditor({
       } finally {
         isUpdatingFromExternalRef.current = false
         initialLoadedRef.current = true
+        lastAppliedContentRef.current = initialContent
       }
     } else {
       initialLoadedRef.current = true
+      lastAppliedContentRef.current = ""
+    }
+  }, [editor, initialContent])
+
+  // Sync external content changes when editor is not actively focused
+  useEffect(() => {
+    if (!editor || !initialLoadedRef.current) return
+    const incoming = initialContent || ""
+    if (incoming === lastAppliedContentRef.current) return
+
+    const isFocused =
+      typeof document !== "undefined" &&
+      containerRef.current?.contains(document.activeElement)
+
+    if (isFocused) {
+      // Don't overwrite while user is actively typing in the editor
+      return
+    }
+
+    isUpdatingFromExternalRef.current = true
+    try {
+      if (incoming.trim()) {
+        const blocks = editor.tryParseHTMLToBlocks(incoming)
+        if (blocks && blocks.length > 0) {
+          editor.replaceBlocks(editor.document, blocks)
+        }
+      } else {
+        editor.replaceBlocks(editor.document, [])
+      }
+      lastAppliedContentRef.current = incoming
+    } catch (err) {
+      console.error("Failed to sync external content to BlockNote:", err)
+    } finally {
+      isUpdatingFromExternalRef.current = false
     }
   }, [editor, initialContent])
 
@@ -83,6 +121,7 @@ export function BlockNoteEditor({
       if (isUpdatingFromExternalRef.current) return
       try {
         const html = await editor.blocksToHTMLLossy(editor.document)
+        lastAppliedContentRef.current = html
         onChange(html)
       } catch (err) {
         console.error("Failed to serialize BlockNote blocks to HTML:", err)
@@ -95,6 +134,7 @@ export function BlockNoteEditor({
     if (!editor || !onBlur) return
     try {
       const html = await editor.blocksToHTMLLossy(editor.document)
+      lastAppliedContentRef.current = html
       onBlur(html)
     } catch (err) {
       console.error("Failed to serialize BlockNote on blur:", err)
@@ -103,6 +143,7 @@ export function BlockNoteEditor({
 
   return (
     <div
+      ref={containerRef}
       className={cn("flex min-h-full flex-1 flex-col bg-card", className)}
       onBlur={handleBlur}
     >

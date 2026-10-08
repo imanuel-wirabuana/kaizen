@@ -390,3 +390,85 @@ export function subscribeToAssistantChanges(
     }
   }
 }
+
+export interface ThreadMessagesRealtimeHandlers {
+  onInsertMessage: (message: AiMessage) => void
+  onDeleteMessage?: (id: number) => void
+}
+
+let activeThreadChannel: RealtimeChannel | null = null
+let currentThreadId: number | null = null
+const activeThreadHandlers = new Set<ThreadMessagesRealtimeHandlers>()
+
+/**
+ * Subscribe to realtime messages for a specific AI thread.
+ */
+export function subscribeToThreadMessages(
+  threadId: number,
+  handlers: ThreadMessagesRealtimeHandlers
+): () => void {
+  activeThreadHandlers.add(handlers)
+
+  if (activeThreadChannel && currentThreadId === threadId) {
+    return () => {
+      activeThreadHandlers.delete(handlers)
+      if (activeThreadHandlers.size === 0 && activeThreadChannel) {
+        void supabase.removeChannel(activeThreadChannel)
+        activeThreadChannel = null
+        currentThreadId = null
+      }
+    }
+  }
+
+  if (activeThreadChannel) {
+    void supabase.removeChannel(activeThreadChannel)
+    activeThreadChannel = null
+  }
+
+  currentThreadId = threadId
+
+  const staleChannels = supabase
+    .getChannels()
+    .filter((c) => c.topic === `realtime:thread_messages:${threadId}`)
+  for (const stale of staleChannels) {
+    void supabase.removeChannel(stale)
+  }
+
+  const channel: RealtimeChannel = supabase
+    .channel(`thread_messages:${threadId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "ai_messages",
+        filter: `thread_id=eq.${threadId}`,
+      },
+      (payload) => {
+        if (payload.eventType === "INSERT") {
+          const newMsg = payload.new as AiMessage
+          for (const h of activeThreadHandlers) {
+            h.onInsertMessage(newMsg)
+          }
+        } else if (payload.eventType === "DELETE") {
+          const oldRecord = payload.old as { id: number }
+          for (const h of activeThreadHandlers) {
+            h.onDeleteMessage?.(oldRecord.id)
+          }
+        }
+      }
+    )
+    .subscribe()
+
+  activeThreadChannel = channel
+
+  return () => {
+    activeThreadHandlers.delete(handlers)
+    if (activeThreadHandlers.size === 0 && activeThreadChannel) {
+      void supabase.removeChannel(activeThreadChannel)
+      activeThreadChannel = null
+      currentThreadId = null
+    }
+  }
+}
+

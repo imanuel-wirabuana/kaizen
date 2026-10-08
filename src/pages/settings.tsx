@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/clerk-react"
-import { Moon, Sun, Monitor, Check, Save } from "lucide-react"
+import { Moon, Sun, Monitor, Check, Save, Lock } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,11 +8,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
+import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
+import { AccessDeniedState } from "@/features/members/components/access-denied-state"
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { user } = useUser()
   const { activeWorkspace, updateWorkspace } = useWorkspaces()
+  const { canRead, canUpdate, isLoading: isPermsLoading } = useWorkspacePermissions()
 
   const [name, setName] = useState(activeWorkspace?.name || "")
   const [description, setDescription] = useState(activeWorkspace?.description || "")
@@ -25,9 +28,21 @@ export function SettingsPage() {
     }
   }, [activeWorkspace])
 
+  // 1. workspace.read guard
+  if (!isPermsLoading && !canRead("workspace")) {
+    return (
+      <AccessDeniedState
+        resource="Settings"
+        description="You do not have permission to view workspace settings."
+      />
+    )
+  }
+
+  const hasUpdate = canUpdate("workspace")
+
   const handleSaveWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeWorkspace || !name.trim()) return
+    if (!activeWorkspace || !name.trim() || !hasUpdate) return
 
     try {
       setIsSaving(true)
@@ -59,9 +74,16 @@ export function SettingsPage() {
               Configure name and details for this workspace.
             </p>
           </div>
-          <Badge variant="outline" className="text-xs">
-            Standard Tier
-          </Badge>
+          {!hasUpdate ? (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <Lock className="size-3" />
+              <span>Read-only</span>
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs">
+              Standard Tier
+            </Badge>
+          )}
         </div>
 
         <form onSubmit={handleSaveWorkspace} className="flex flex-col gap-4 pt-1">
@@ -75,6 +97,7 @@ export function SettingsPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Acme Studio, Kaizen Core"
               className="text-xs bg-card"
+              disabled={!hasUpdate || isSaving}
               required
             />
           </div>
@@ -89,20 +112,28 @@ export function SettingsPage() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of this workspace's purpose..."
               className="text-xs min-h-[70px] bg-card resize-none"
+              disabled={!hasUpdate || isSaving}
             />
           </div>
 
-          <div className="flex justify-end pt-1">
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isSaving || !name.trim()}
-              className="gap-1.5 cursor-pointer"
-            >
-              <Save className="size-3.5" />
-              <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-            </Button>
-          </div>
+          {hasUpdate ? (
+            <div className="flex justify-end pt-1">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSaving || !name.trim()}
+                className="gap-1.5 cursor-pointer"
+              >
+                <Save className="size-3.5" />
+                <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+              <Lock className="size-3" />
+              <span>You have read-only access to this workspace&apos;s settings.</span>
+            </div>
+          )}
         </form>
       </Card>
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useUser } from "@clerk/clerk-react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "@/components/ui/toast"
@@ -10,6 +10,7 @@ import {
   createMessageRecord,
   clearThreadMessages,
   updateThreadRecord,
+  subscribeToThreadMessages,
 } from "@/features/assistant/services/assistant-service"
 import { assistantKeys } from "@/features/assistant/services/assistant-keys"
 import {
@@ -52,6 +53,50 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
     gcTime: 1000 * 60 * 15,
   })
 
+  // Realtime subscription on thread messages for instantaneous multi-user chat
+  useEffect(() => {
+    if (!threadId) return
+
+    const unsubscribe = subscribeToThreadMessages(threadId, {
+      onInsertMessage: (newMessage) => {
+        queryClient.setQueryData<AiMessage[]>(
+          assistantKeys.messages(threadId),
+          (old) => {
+            if (!old) return [newMessage]
+            if (old.some((m) => m.id === newMessage.id)) return old
+            // Check if there is an optimistic temp message matching this new message from the sender
+            const hasOptimisticMatch = old.some(
+              (m) =>
+                m.id < 0 &&
+                m.owner_id === newMessage.owner_id &&
+                m.content === newMessage.content
+            )
+            if (hasOptimisticMatch) {
+              return old.map((m) =>
+                m.id < 0 &&
+                m.owner_id === newMessage.owner_id &&
+                m.content === newMessage.content
+                  ? newMessage
+                  : m
+              )
+            }
+            return [...old, newMessage]
+          }
+        )
+      },
+      onDeleteMessage: (deletedId) => {
+        queryClient.setQueryData<AiMessage[]>(
+          assistantKeys.messages(threadId),
+          (old) => old?.filter((m) => m.id !== deletedId) ?? []
+        )
+      },
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [threadId])
+
   // Check if thread title should be smartly auto-updated
   const shouldAutoUpdateTitle = useCallback(
     (currentMessages: AiMessage[]) => {
@@ -88,6 +133,17 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
       setIsStreaming(true)
       setStreamedContent("")
 
+      const senderName =
+        user.fullName ||
+        [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+        user.username ||
+        "Team Member"
+
+      const messageMetadata: Record<string, unknown> = {
+        sender_name: senderName,
+        sender_avatar: user.imageUrl || null,
+      }
+
       // 1. Optimistic User Message
       const tempUserMsg: AiMessage = {
         id: -Date.now(),
@@ -95,6 +151,7 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
         owner_id: user.id,
         role: "user",
         content,
+        metadata: messageMetadata,
         created_at: new Date().toISOString(),
       }
 
@@ -111,6 +168,7 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
           ownerId: user.id,
           role: "user",
           content,
+          metadata: messageMetadata,
         })
 
         // Replace optimistic ID with DB ID
@@ -153,15 +211,53 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
           })()
         }
 
-        // 4. Prepare History for AI Streaming
+        // 4. Prepare History for AI Streaming (Multi-user context attribution)
+        const workspaceProfiles =
+          (activeWorkspace?.settings?.profiles as Record<
+            string,
+            { displayName?: string; email?: string; avatarUrl?: string }
+          >) || {}
+
+        const userOwnerIds = new Set(
+          existingMessages
+            .filter((m) => m.role === "user")
+            .map((m) => m.owner_id)
+        )
+        userOwnerIds.add(user.id)
+        const hasMultipleUsers = userOwnerIds.size > 1
+
+        const getAuthorName = (
+          ownerId: string,
+          metadata?: Record<string, unknown> | null
+        ) => {
+          if (ownerId === user.id) {
+            return senderName
+          }
+          const prof = workspaceProfiles[ownerId]
+          const metaName =
+            typeof metadata?.sender_name === "string"
+              ? metadata.sender_name
+              : undefined
+          return prof?.displayName || metaName || "Collaborator"
+        }
+
         const apiMessages: ChatMessage[] = [
-          ...existingMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          ...existingMessages.map((m) => {
+            if (m.role === "user" && hasMultipleUsers) {
+              const author = getAuthorName(m.owner_id, m.metadata)
+              return {
+                role: m.role,
+                content: `[${author}]: ${m.content}`,
+              }
+            }
+            return {
+              role: m.role,
+              content: m.content,
+            }
+          }),
           {
             role: "user",
-            content,
+            content: hasMultipleUsers ? `[${senderName}]: ${content}` : content,
           },
         ]
 
@@ -238,6 +334,7 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
       shouldAutoUpdateTitle,
       effectiveModel,
       workspaceId,
+      activeWorkspace,
       upsertThread,
     ]
   )

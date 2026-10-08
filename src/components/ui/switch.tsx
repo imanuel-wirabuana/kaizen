@@ -1,31 +1,88 @@
-"use client"
-
-import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
+import * as React from "react"
 import { cn } from "cn"
 
-function Switch({
-  className,
-  size = "default",
-  ...props
-}: SwitchPrimitive.Root.Props & {
+export interface SwitchProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+  checked?: boolean
+  defaultChecked?: boolean
+  onCheckedChange?: (checked: boolean) => void
   size?: "sm" | "default"
-}) {
-  return (
-    <SwitchPrimitive.Root
-      data-slot="switch"
-      data-size={size}
-      className={cn(
-        "peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none group-has-[:focus-visible]/field-label:border-transparent group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 data-[size=default]:h-[16.6px] data-[size=default]:w-[28px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50",
-        className
-      )}
-      {...props}
-    >
-      <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-3.5 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
-      />
-    </SwitchPrimitive.Root>
-  )
 }
+
+const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
+  (
+    {
+      className,
+      checked: controlledChecked,
+      defaultChecked = false,
+      onCheckedChange,
+      disabled = false,
+      size = "default",
+      onClick,
+      ...props
+    },
+    ref
+  ) => {
+    const isControlled = controlledChecked !== undefined
+    const [internalChecked, setInternalChecked] = React.useState(defaultChecked)
+    const isChecked = isControlled ? Boolean(controlledChecked) : internalChecked
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (disabled) return
+      e.stopPropagation()
+      const nextChecked = !isChecked
+      if (!isControlled) {
+        setInternalChecked(nextChecked)
+      }
+      onCheckedChange?.(nextChecked)
+      onClick?.(e)
+    }
+
+    return (
+      <button
+        ref={ref}
+        type="button"
+        role="switch"
+        aria-checked={isChecked}
+        data-slot="switch"
+        data-size={size}
+        data-state={isChecked ? "checked" : "unchecked"}
+        data-checked={isChecked ? "" : undefined}
+        data-unchecked={!isChecked ? "" : undefined}
+        disabled={disabled}
+        onClick={handleClick}
+        className={cn(
+          "peer group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors outline-none",
+          "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          size === "sm" ? "h-[14px] w-[24px]" : "h-[18px] w-[32px]",
+          isChecked ? "bg-primary" : "bg-input dark:bg-muted-foreground/30",
+          className
+        )}
+        {...props}
+      >
+        <span
+          data-slot="switch-thumb"
+          data-state={isChecked ? "checked" : "unchecked"}
+          data-checked={isChecked ? "" : undefined}
+          data-unchecked={!isChecked ? "" : undefined}
+          className={cn(
+            "pointer-events-none block rounded-full bg-background shadow-xs ring-0 transition-transform duration-200 ease-in-out dark:bg-foreground",
+            size === "sm" ? "size-2.5" : "size-3.5",
+            isChecked
+              ? size === "sm"
+                ? "translate-x-[11px] bg-primary-foreground dark:bg-primary-foreground"
+                : "translate-x-[16px] bg-primary-foreground dark:bg-primary-foreground"
+              : size === "sm"
+                ? "translate-x-[1.5px]"
+                : "translate-x-[2px]"
+          )}
+        />
+      </button>
+    )
+  }
+)
+
+Switch.displayName = "Switch"
 
 export { Switch }

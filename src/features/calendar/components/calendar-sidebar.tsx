@@ -15,7 +15,8 @@ export interface CalendarSidebarProps {
   onSelectFolder: (folder: CalendarFolder) => void
   allCount: number
   archivedCount: number
-  onCreateCalendar: (name?: string) => Promise<Calendar | void>
+  canCreate?: boolean
+  onCreateCalendar?: (name?: string) => Promise<Calendar | void>
   calendars: Calendar[]
   selectedCalendarId: number | null
   onSelectCalendar: (id: number) => void
@@ -34,6 +35,7 @@ export function CalendarSidebar({
   onSelectFolder,
   allCount,
   archivedCount,
+  canCreate = true,
   onCreateCalendar,
   calendars,
   selectedCalendarId,
@@ -85,7 +87,9 @@ export function CalendarSidebar({
               </div>
             </div>
 
-            <CalendarQuickCreate onCreate={onCreateCalendar} />
+            {canCreate !== false && onCreateCalendar && (
+              <CalendarQuickCreate onCreate={onCreateCalendar} />
+            )}
           </>
         )}
       </SidebarHeader>

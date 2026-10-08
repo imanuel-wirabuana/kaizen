@@ -1,10 +1,11 @@
 import { Link } from "wouter"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import kaizenLogo from "@/assets/kaizen-logo.svg"
 
 export interface BrandProps {
   className?: string
@@ -27,20 +28,17 @@ export function Brand({ className, href = "/" }: BrandProps) {
           />
         }
       >
-        {/* Monogram Badge (Iconic 32x32 stacked Kai / Zen tile) */}
-        <div className="relative flex size-8 shrink-0 flex-col items-center justify-center rounded-lg border border-sidebar-border/80 bg-sidebar-accent/50 shadow-2xs transition-all duration-200 group-hover:border-primary/50 group-hover:bg-sidebar-accent group-hover:shadow-xs group-active:scale-95">
+        {/* Logo Badge (32x32) */}
+        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg border border-sidebar-border/80 bg-sidebar-accent/50 p-1 shadow-2xs transition-all duration-200 group-hover:border-primary/50 group-hover:bg-sidebar-accent group-hover:shadow-xs group-active:scale-95 overflow-hidden">
           {/* Subtle glowing ambient accent */}
           <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-b from-primary/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Stacked Kai / Zen Monogram */}
-          <div className="relative flex flex-col items-center justify-center font-black uppercase leading-[0.82]">
-            <span className="text-[9px] tracking-[0.14em] text-foreground/90 transition-colors group-hover:text-foreground">
-              KAI
-            </span>
-            <span className="text-[9px] tracking-[0.14em] text-primary transition-colors group-hover:text-primary">
-              ZEN
-            </span>
-          </div>
+          {/* Kaizen Logo */}
+          <img
+            src={kaizenLogo}
+            alt="Kaizen"
+            className="size-full object-contain rounded-sm"
+          />
         </div>
 
         {/* Expanded Label (Visible when sidebar is expanded, hidden in collapsed icon mode) */}

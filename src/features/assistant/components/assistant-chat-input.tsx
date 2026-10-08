@@ -12,6 +12,8 @@ export interface AssistantChatInputProps {
   modelName: string
   onModelChange: (model: string) => void | Promise<unknown>
   isArchived?: boolean
+  disabled?: boolean
+  disabledMessage?: string
   placeholder?: string
   initialValue?: string
   className?: string
@@ -24,6 +26,8 @@ export function AssistantChatInput({
   modelName,
   onModelChange,
   isArchived = false,
+  disabled = false,
+  disabledMessage,
   placeholder = "Ask assistant anything...",
   initialValue = "",
   className,
@@ -39,14 +43,14 @@ export function AssistantChatInput({
 
   // Focus textarea on mount or when thread changes
   useEffect(() => {
-    if (!isArchived && !isStreaming) {
+    if (!isArchived && !disabled && !isStreaming) {
       textareaRef.current?.focus()
     }
-  }, [isArchived, isStreaming])
+  }, [isArchived, disabled, isStreaming])
 
   const handleSend = async () => {
     const trimmed = input.trim()
-    if (!trimmed || isStreaming || isArchived) return
+    if (!trimmed || isStreaming || isArchived || disabled) return
 
     setInput("")
     // Reset textarea height
@@ -70,6 +74,14 @@ export function AssistantChatInput({
     const target = e.target
     target.style.height = "auto"
     target.style.height = `${Math.min(target.scrollHeight, 160)}px`
+  }
+
+  if (disabled) {
+    return (
+      <div className="border-t border-border/60 bg-muted/30 p-3 text-center text-xs text-muted-foreground">
+        {disabledMessage || "You do not have permission to send messages in this workspace."}
+      </div>
+    )
   }
 
   if (isArchived) {

@@ -1,4 +1,5 @@
 import { useUser } from "@clerk/clerk-react"
+import { useActiveWorkspace } from "@/stores/workspace-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatDistanceToNow } from "date-fns"
@@ -23,6 +24,12 @@ export function BoardItemRow({
   onClick,
 }: BoardItemRowProps) {
   const { user } = useUser()
+  const activeWorkspace = useActiveWorkspace()
+  const workspaceProfiles =
+    (activeWorkspace?.settings?.profiles as Record<
+      string,
+      { displayName?: string; email?: string; avatarUrl?: string }
+    >) || {}
 
   const formattedDate = (() => {
     try {
@@ -35,25 +42,31 @@ export function BoardItemRow({
   })()
 
   const isCurrentUser = Boolean(user && board.owner_id === user.id)
+  const creatorProfile = board.owner_id
+    ? workspaceProfiles[board.owner_id]
+    : undefined
 
   const ownerName = isCurrentUser
     ? "You"
-    : (typeof board.settings?.owner_name === "string" &&
+    : creatorProfile?.displayName ||
+      (typeof board.settings?.owner_name === "string" &&
         board.settings.owner_name) ||
-      "Member"
+      "Collaborator"
 
   const ownerFullName = isCurrentUser
     ? user?.fullName ||
       [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
       user?.username ||
       "You"
-    : (typeof board.settings?.owner_name === "string" &&
+    : creatorProfile?.displayName ||
+      (typeof board.settings?.owner_name === "string" &&
         board.settings.owner_name) ||
-      "Member"
+      "Collaborator"
 
   const ownerImageUrl = isCurrentUser
     ? user?.imageUrl
-    : (typeof board.settings?.owner_image === "string" &&
+    : creatorProfile?.avatarUrl ||
+      (typeof board.settings?.owner_image === "string" &&
         board.settings.owner_image) ||
       undefined
 
@@ -66,6 +79,13 @@ export function BoardItemRow({
       if (user?.username) return user.username.slice(0, 2).toUpperCase()
       return "U"
     }
+    if (creatorProfile?.displayName) {
+      const parts = creatorProfile.displayName.trim().split(/\s+/)
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      }
+      return parts[0].slice(0, 2).toUpperCase()
+    }
     const nameStr =
       (typeof board.settings?.owner_name === "string" &&
         board.settings.owner_name) ||
@@ -77,7 +97,7 @@ export function BoardItemRow({
       }
       return parts[0].slice(0, 2).toUpperCase()
     }
-    return "M"
+    return "CB"
   })()
 
   return (

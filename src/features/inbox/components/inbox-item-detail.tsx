@@ -13,10 +13,11 @@ interface InboxItemDetailProps {
     id: number,
     updates: { name: string; description?: string }
   ) => Promise<void>
-  onArchive: (id: number) => Promise<void>
-  onRestore: (id: number) => Promise<void>
-  onDelete: (id: number) => Promise<void>
+  onArchive?: (id: number) => Promise<void>
+  onRestore?: (id: number) => Promise<void>
+  onDelete?: (id: number) => Promise<void>
   onBackToZenbox?: () => void
+  isReadOnly?: boolean
 }
 
 export function InboxItemDetail({
@@ -28,6 +29,7 @@ export function InboxItemDetail({
   onRestore,
   onDelete,
   onBackToZenbox,
+  isReadOnly = false,
 }: InboxItemDetailProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -36,9 +38,9 @@ export function InboxItemDetail({
     if (!zen || isProcessing) return
     try {
       setIsProcessing(true)
-      if (zen.archived_at) {
+      if (zen.archived_at && onRestore) {
         await onRestore(zen.id)
-      } else {
+      } else if (!zen.archived_at && onArchive) {
         await onArchive(zen.id)
       }
     } finally {
@@ -47,7 +49,7 @@ export function InboxItemDetail({
   }
 
   const handleDelete = async () => {
-    if (!zen || isProcessing) return
+    if (!zen || isProcessing || !onDelete) return
     try {
       setIsProcessing(true)
       await onDelete(zen.id)
@@ -63,8 +65,12 @@ export function InboxItemDetail({
         zen={zen}
         saveStatus={saveStatus}
         isProcessing={isProcessing}
-        onToggleArchive={zen ? handleToggleArchive : undefined}
-        onDelete={zen ? handleDelete : undefined}
+        onToggleArchive={
+          zen && (zen.archived_at ? onRestore : onArchive)
+            ? handleToggleArchive
+            : undefined
+        }
+        onDelete={zen && onDelete ? handleDelete : undefined}
       />
 
       {/* Main Detail Body (Scrollable) */}
@@ -115,6 +121,7 @@ export function InboxItemDetail({
             zen={zen}
             onUpdate={onUpdate}
             onSaveStatusChange={setSaveStatus}
+            isReadOnly={isReadOnly}
           />
         )}
       </div>

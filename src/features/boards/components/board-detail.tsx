@@ -8,9 +8,9 @@ export interface BoardDetailProps {
   board: Board | null
   isLoading?: boolean
   selectedBoardId?: number | null
-  onArchive: (id: number) => Promise<boolean>
-  onRestore: (id: number) => Promise<boolean>
-  onDelete: (id: number) => Promise<boolean>
+  onArchive?: (id: number) => Promise<boolean>
+  onRestore?: (id: number) => Promise<boolean>
+  onDelete?: (id: number) => Promise<boolean>
   onBackToBoards?: () => void
 }
 
@@ -29,9 +29,9 @@ export function BoardDetail({
     if (!board || isProcessing) return
     try {
       setIsProcessing(true)
-      if (board.archived_at) {
+      if (board.archived_at && onRestore) {
         await onRestore(board.id)
-      } else {
+      } else if (!board.archived_at && onArchive) {
         await onArchive(board.id)
       }
     } finally {
@@ -40,7 +40,7 @@ export function BoardDetail({
   }
 
   const handleDelete = async () => {
-    if (!board || isProcessing) return
+    if (!board || isProcessing || !onDelete) return
     try {
       setIsProcessing(true)
       await onDelete(board.id)
@@ -55,8 +55,12 @@ export function BoardDetail({
       <BoardDetailHeader
         board={board}
         isProcessing={isProcessing}
-        onToggleArchive={board ? handleToggleArchive : undefined}
-        onDelete={board ? handleDelete : undefined}
+        onToggleArchive={
+          board && (board.archived_at ? onRestore : onArchive)
+            ? handleToggleArchive
+            : undefined
+        }
+        onDelete={board && onDelete ? handleDelete : undefined}
       />
 
       {/* Main Detail Body (Scrollable) */}

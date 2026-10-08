@@ -20,6 +20,7 @@ import { AssistantChatMessages } from "@/features/assistant/components/assistant
 import { AssistantChatInput } from "@/features/assistant/components/assistant-chat-input"
 import { useAssistant } from "@/features/assistant/hooks/use-assistant"
 import { useAiChat } from "@/features/assistant/hooks/use-ai-chat"
+import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
 import { useAssistantStore } from "@/stores/assistant-store"
 
 export interface AssistantRightSidebarProps {
@@ -30,6 +31,8 @@ export function AssistantRightSidebar({
   className,
 }: AssistantRightSidebarProps) {
   const { user } = useUser()
+  const { canCreate: canCreatePerm } = useWorkspacePermissions()
+  const canCreateAssistant = canCreatePerm("assistant")
   const isOpen = useAssistantStore((state) => state.isRightSidebarOpen)
   const setIsOpen = useAssistantStore((state) => state.setRightSidebarOpen)
 
@@ -138,16 +141,18 @@ export function AssistantRightSidebar({
             </div>
 
             {/* Button to Create New Convo */}
-            <Button
-              size="sm"
-              onClick={() => void createThread()}
-              disabled={isCreating}
-              className="h-7 shrink-0 cursor-pointer gap-1 px-2 text-xs font-medium"
-              title="Create new conversation"
-            >
-              <Plus className="size-3.5" />
-              <span className="hidden sm:inline">New Convo</span>
-            </Button>
+            {canCreateAssistant && (
+              <Button
+                size="sm"
+                onClick={() => void createThread()}
+                disabled={isCreating}
+                className="h-7 shrink-0 cursor-pointer gap-1 px-2 text-xs font-medium"
+                title="Create new conversation"
+              >
+                <Plus className="size-3.5" />
+                <span className="hidden sm:inline">New Convo</span>
+              </Button>
+            )}
 
             {/* Close Button */}
             <Button
@@ -231,6 +236,7 @@ export function AssistantRightSidebar({
             modelName={effectiveModel}
             onModelChange={changeModel}
             isArchived={Boolean(selectedThread?.archived_at)}
+            disabled={!canCreateAssistant}
             placeholder={`Message ${effectiveModel || "assistant"}...`}
           />
         </SidebarFooter>

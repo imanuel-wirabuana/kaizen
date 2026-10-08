@@ -8,9 +8,9 @@ export interface CalendarDetailProps {
   calendar: Calendar | null
   isLoading?: boolean
   selectedCalendarId?: number | null
-  onArchive: (id: number) => Promise<boolean>
-  onRestore: (id: number) => Promise<boolean>
-  onDelete: (id: number) => Promise<boolean>
+  onArchive?: (id: number) => Promise<boolean>
+  onRestore?: (id: number) => Promise<boolean>
+  onDelete?: (id: number) => Promise<boolean>
   onBackToCalendars?: () => void
 }
 
@@ -29,9 +29,9 @@ export function CalendarDetail({
     if (!calendar || isProcessing) return
     try {
       setIsProcessing(true)
-      if (calendar.archived_at) {
+      if (calendar.archived_at && onRestore) {
         await onRestore(calendar.id)
-      } else {
+      } else if (!calendar.archived_at && onArchive) {
         await onArchive(calendar.id)
       }
     } finally {
@@ -40,7 +40,7 @@ export function CalendarDetail({
   }
 
   const handleDelete = async () => {
-    if (!calendar || isProcessing) return
+    if (!calendar || isProcessing || !onDelete) return
     try {
       setIsProcessing(true)
       await onDelete(calendar.id)
@@ -55,8 +55,12 @@ export function CalendarDetail({
       <CalendarDetailHeader
         calendar={calendar}
         isProcessing={isProcessing}
-        onToggleArchive={calendar ? handleToggleArchive : undefined}
-        onDelete={calendar ? handleDelete : undefined}
+        onToggleArchive={
+          calendar && (calendar.archived_at ? onRestore : onArchive)
+            ? handleToggleArchive
+            : undefined
+        }
+        onDelete={calendar && onDelete ? handleDelete : undefined}
       />
 
       {/* Main Detail Body (Scrollable) */}

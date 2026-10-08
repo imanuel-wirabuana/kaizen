@@ -1,4 +1,5 @@
-import { Redirect, Route, Switch } from "wouter"
+import { useEffect } from "react"
+import { Redirect, Route, Switch, useLocation } from "wouter"
 import { useAuth } from "@clerk/clerk-react"
 import { RootLayout } from "@/components/layout/root-layout"
 import { Toaster } from "@/components/ui/toast"
@@ -9,9 +10,28 @@ import { CalendarPage } from "@/pages/calendar"
 import { AssistantPage } from "@/pages/assistant"
 import { SettingsPage } from "@/pages/settings"
 import { MembersPage } from "@/pages/members"
+import { MemberPermissionsPage } from "@/pages/member-permissions"
 import { AboutPage } from "@/pages/about"
 import { LandingPage } from "@/pages/landing"
 import { NotFound } from "@/components/not-found"
+
+function InviteCaptureRoute({ params }: { params: { code: string } }) {
+  const [, setLocation] = useLocation()
+
+  useEffect(() => {
+    if (params?.code) {
+      try {
+        localStorage.setItem("kaizen_pending_invite", params.code)
+        sessionStorage.setItem("kaizen_pending_invite", params.code)
+      } catch {
+        // Ignore storage exceptions
+      }
+      setLocation(`/?invite=${encodeURIComponent(params.code)}`)
+    }
+  }, [params?.code, setLocation])
+
+  return null
+}
 
 export function App() {
   const { isLoaded, isSignedIn } = useAuth()
@@ -20,16 +40,23 @@ export function App() {
     return null
   }
 
+  const searchParams =
+    typeof window !== "undefined" ? window.location.search : ""
+
   return (
     <>
       <Switch>
+      {/* Invite capture routes */}
+      <Route path="/join/:code" component={InviteCaptureRoute} />
+      <Route path="/invite/:code" component={InviteCaptureRoute} />
+
       {/* Standalone Landing Page at /home */}
       <Route path="/home" component={LandingPage} />
 
       {/* Authenticated workspace routes wrapped in RootLayout */}
       <Route>
         {!isSignedIn ? (
-          <Redirect to="/home" />
+          <Redirect to={`/home${searchParams}`} />
         ) : (
           <RootLayout>
             <Switch>
@@ -59,6 +86,7 @@ export function App() {
 
               {/* members */}
               <Route path="/members" component={MembersPage} />
+              <Route path="/members/:id" component={MemberPermissionsPage} />
 
               {/* about */}
               <Route path="/about" component={AboutPage} />

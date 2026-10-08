@@ -19,25 +19,59 @@ const DEFAULT_TIMEZONE = "Asia/Jakarta"
 const DEFAULT_VIEW = "boards"
 
 /**
- * Fetch all unarchived workspaces owned by the given user.
+ * Fetch all unarchived workspaces owned by or shared with the given user.
  */
-export async function fetchActiveWorkspaces(ownerId: string): Promise<Workspace[]> {
-  if (!ownerId) {
+export async function fetchActiveWorkspaces(userId: string): Promise<Workspace[]> {
+  if (!userId) {
     return []
   }
 
-  const { data, error } = await supabase
+  // 1. Fetch workspaces owned by user
+  const { data: ownedData, error: ownedError } = await supabase
     .from("workspaces")
     .select("*")
-    .eq("owner_id", ownerId)
+    .eq("owner_id", userId)
     .is("archived_at", null)
     .order("created_at", { ascending: true })
 
-  if (error) {
-    throw new Error(`Failed to fetch workspaces: ${error.message}`)
+  if (ownedError) {
+    throw new Error(`Failed to fetch workspaces: ${ownedError.message}`)
   }
 
-  return (data as Workspace[]) || []
+  // 2. Fetch workspaces where user is an active collaborator
+  const { data: memberRows, error: memberError } = await supabase
+    .from("workspace_members")
+    .select("workspace:workspaces(*)")
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+
+  const memberWorkspaces: Workspace[] = []
+  if (!memberError && memberRows) {
+    for (const row of memberRows) {
+      const ws = (row as unknown as { workspace: Workspace | null }).workspace
+      if (ws && !ws.archived_at) {
+        memberWorkspaces.push(ws)
+      }
+    }
+  }
+
+  // 3. Merge & deduplicate
+  const workspaceMap = new Map<number, Workspace>()
+  for (const w of (ownedData as Workspace[]) || []) {
+    workspaceMap.set(w.id, w)
+  }
+  for (const w of memberWorkspaces) {
+    if (!workspaceMap.has(w.id)) {
+      workspaceMap.set(w.id, w)
+    }
+  }
+
+  const allWorkspaces = Array.from(workspaceMap.values())
+  allWorkspaces.sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+
+  return allWorkspaces
 }
 
 /**

@@ -1,9 +1,14 @@
 import { useAssistant } from "@/features/assistant/hooks/use-assistant"
+import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
+import { AccessDeniedState } from "@/features/members/components/access-denied-state"
 import { PageSidebarLayout } from "@/components/layout/page-sidebar-layout"
 import { AssistantSidebar } from "@/features/assistant/components/assistant-sidebar"
 import { AssistantDetail } from "@/features/assistant/components/assistant-detail"
 
 export function AssistantPage() {
+  const { canRead, canCreate, canDelete, isLoading: isPermsLoading } =
+    useWorkspacePermissions()
+
   const {
     filteredThreads,
     selectedThread,
@@ -29,6 +34,19 @@ export function AssistantPage() {
     changeModel,
   } = useAssistant({ syncUrl: true })
 
+  // 1. assistant.read guard
+  if (!isPermsLoading && !canRead("assistant")) {
+    return (
+      <AccessDeniedState
+        resource="AI Assistant"
+        description="You do not have permission to access the AI assistant in this workspace."
+      />
+    )
+  }
+
+  const hasCreate = canCreate("assistant")
+  const hasDelete = canDelete("assistant")
+
   return (
     <PageSidebarLayout
       className="bg-card"
@@ -38,7 +56,8 @@ export function AssistantPage() {
           onSelectFolder={setActiveFolder}
           activeCount={activeCount}
           archivedCount={archivedCount}
-          onCreateThread={createThread}
+          canCreate={hasCreate}
+          onCreateThread={hasCreate ? createThread : undefined}
           threads={filteredThreads}
           selectedThreadId={selectedThreadId}
           onSelectThread={setSelectedThreadId}
@@ -49,9 +68,9 @@ export function AssistantPage() {
             selectAllBatch(filteredThreads.map((t) => t.id))
           }
           onClearBatchSelect={clearBatchSelect}
-          onBatchArchive={batchArchiveThreads}
-          onBatchRestore={batchRestoreThreads}
-          onBatchDelete={batchDeleteThreads}
+          onBatchArchive={hasDelete ? batchArchiveThreads : undefined}
+          onBatchRestore={hasDelete ? batchRestoreThreads : undefined}
+          onBatchDelete={hasDelete ? batchDeleteThreads : undefined}
         />
       }
     >
@@ -61,9 +80,10 @@ export function AssistantPage() {
         selectedThreadId={selectedThreadId}
         modelName={selectedThread?.settings?.model || modelName}
         onModelChange={changeModel}
-        onArchive={archiveThread}
-        onRestore={restoreThread}
-        onDelete={deleteThread}
+        canCreate={hasCreate}
+        onArchive={hasDelete ? archiveThread : undefined}
+        onRestore={hasDelete ? restoreThread : undefined}
+        onDelete={hasDelete ? deleteThread : undefined}
         onBackToAssistant={() => setSelectedThreadId(null)}
       />
     </PageSidebarLayout>

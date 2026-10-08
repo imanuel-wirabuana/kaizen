@@ -14,10 +14,8 @@ export interface InboxSidebarProps {
   zenboxCount: number
   archivedCount: number
   searchQuery: string
-  onSearchChange: (query: string) => void
-  showUnreadOnly: boolean
-  onToggleUnread: (show: boolean) => void
-  onCapture: (name?: string) => Promise<Zen | void>
+  canCreate?: boolean
+  onCapture?: (name?: string) => Promise<Zen | void>
   zens: Zen[]
   selectedZenId: number | null
   onSelectZen: (id: number) => void
@@ -37,7 +35,7 @@ export function InboxSidebar({
   zenboxCount,
   archivedCount,
   searchQuery,
-
+  canCreate = true,
   onCapture,
   zens,
   selectedZenId,
@@ -83,7 +81,9 @@ export function InboxSidebar({
               </div>
             </div>
 
-            <InboxQuickCapture onCapture={onCapture} />
+            {canCreate !== false && onCapture && (
+              <InboxQuickCapture onCapture={onCapture} />
+            )}
           </>
         )}
       </SidebarHeader>

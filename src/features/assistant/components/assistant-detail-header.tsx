@@ -1,7 +1,10 @@
 import { useState } from "react"
+import { useUser } from "@clerk/clerk-react"
 import { Archive, ArchiveRestore, Eraser, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { useActiveWorkspace } from "@/stores/workspace-store"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +36,55 @@ export function AssistantDetailHeader({
   onDelete,
   className,
 }: AssistantDetailHeaderProps) {
+  const { user } = useUser()
+  const activeWorkspace = useActiveWorkspace()
+  const workspaceProfiles =
+    (activeWorkspace?.settings?.profiles as Record<
+      string,
+      { displayName?: string; email?: string; avatarUrl?: string }
+    >) || {}
+
   const isArchived = Boolean(thread?.archived_at)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isClearOpen, setIsClearOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const isCurrentUser = Boolean(user && thread?.owner_id === user.id)
+  const creatorProfile = thread?.owner_id
+    ? workspaceProfiles[thread.owner_id]
+    : undefined
+
+  const creatorName = isCurrentUser
+    ? "You"
+    : creatorProfile?.displayName ||
+      (typeof thread?.settings?.owner_name === "string" &&
+        thread.settings.owner_name) ||
+      "Collaborator"
+
+  const creatorImageUrl = isCurrentUser
+    ? user?.imageUrl
+    : creatorProfile?.avatarUrl ||
+      (typeof thread?.settings?.owner_image === "string" &&
+        thread.settings.owner_image) ||
+      undefined
+
+  const initials = (() => {
+    if (isCurrentUser) {
+      const first = user?.firstName?.[0]
+      const last = user?.lastName?.[0]
+      if (first && last) return `${first}${last}`.toUpperCase()
+      if (first) return first.toUpperCase()
+      return "U"
+    }
+    if (creatorName) {
+      const parts = creatorName.trim().split(/\s+/)
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      }
+      return parts[0]?.slice(0, 2).toUpperCase() || "CB"
+    }
+    return "CB"
+  })()
 
   const handleConfirmDelete = async () => {
     if (!onDelete || isProcessing || isDeleting) return
@@ -52,8 +100,8 @@ export function AssistantDetailHeader({
   const handleConfirmClear = async () => {
     if (!onClearMessages || isProcessing) return
     try {
-      await onClearMessages()
       setIsClearOpen(false)
+      await onClearMessages()
     } catch {
       // Handled in mutation
     }
@@ -94,6 +142,25 @@ export function AssistantDetailHeader({
                     • {thread.description}
                   </span>
                 )}
+
+                {/* Thread Creator Attribution */}
+                <div
+                  className="hidden items-center gap-1 text-[11px] text-muted-foreground lg:flex"
+                  title={`Conversation created by ${creatorName}`}
+                >
+                  <span>•</span>
+                  <Avatar className="size-3.5 shrink-0 select-none">
+                    {creatorImageUrl ? (
+                      <AvatarImage src={creatorImageUrl} alt={creatorName} />
+                    ) : null}
+                    <AvatarFallback className="bg-muted text-[8px] font-semibold uppercase leading-none text-muted-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-normal text-muted-foreground">
+                    {creatorName}
+                  </span>
+                </div>
 
                 {isArchived && (
                   <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">

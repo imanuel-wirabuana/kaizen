@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { InboxEmptyState } from "@/features/inbox/components/inbox-empty-state"
 import { useBatchSelectedIds, useZenStore } from "@/stores/zen-store"
+import { useActiveWorkspace } from "@/stores/workspace-store"
 import type { Zen } from "@/types/zen"
 import { cn } from "cn"
 import { formatDistanceToNow } from "date-fns"
@@ -25,6 +26,12 @@ export function InboxItemList({
   onSelectZen,
 }: InboxItemListProps) {
   const { user } = useUser()
+  const activeWorkspace = useActiveWorkspace()
+  const workspaceProfiles =
+    (activeWorkspace?.settings?.profiles as Record<
+      string,
+      { displayName?: string; email?: string; avatarUrl?: string }
+    >) || {}
   const selectedBatchIds = useBatchSelectedIds()
   const toggleBatchSelect = useZenStore((state) => state.toggleBatchSelect)
   const isBatchMode = selectedBatchIds.length > 0
@@ -58,25 +65,31 @@ export function InboxItemList({
         })()
 
         const isCurrentUser = Boolean(user && zen.owner_id === user.id)
+        const creatorProfile = zen.owner_id
+          ? workspaceProfiles[zen.owner_id]
+          : undefined
 
         const ownerName = isCurrentUser
           ? "You"
-          : (typeof zen.settings?.owner_name === "string" &&
+          : creatorProfile?.displayName ||
+            (typeof zen.settings?.owner_name === "string" &&
               zen.settings.owner_name) ||
-            "Member"
+            "Collaborator"
 
         const ownerFullName = isCurrentUser
           ? user?.fullName ||
             [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
             user?.username ||
             "You"
-          : (typeof zen.settings?.owner_name === "string" &&
+          : creatorProfile?.displayName ||
+            (typeof zen.settings?.owner_name === "string" &&
               zen.settings.owner_name) ||
-            "Member"
+            "Collaborator"
 
         const ownerImageUrl = isCurrentUser
           ? user?.imageUrl
-          : (typeof zen.settings?.owner_image === "string" &&
+          : creatorProfile?.avatarUrl ||
+            (typeof zen.settings?.owner_image === "string" &&
               zen.settings.owner_image) ||
             undefined
 
@@ -89,6 +102,13 @@ export function InboxItemList({
             if (user?.username) return user.username.slice(0, 2).toUpperCase()
             return "U"
           }
+          if (creatorProfile?.displayName) {
+            const parts = creatorProfile.displayName.trim().split(/\s+/)
+            if (parts.length >= 2) {
+              return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+            }
+            return parts[0].slice(0, 2).toUpperCase()
+          }
           const nameStr =
             (typeof zen.settings?.owner_name === "string" &&
               zen.settings.owner_name) ||
@@ -100,7 +120,7 @@ export function InboxItemList({
             }
             return parts[0].slice(0, 2).toUpperCase()
           }
-          return "M"
+          return "CB"
         })()
 
         return (
