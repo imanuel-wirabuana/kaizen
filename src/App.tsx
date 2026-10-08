@@ -52,6 +52,7 @@ export function App() {
 
               {/* assistant */}
               <Route path="/assistant" component={AssistantPage} />
+              <Route path="/assistant/:id" component={AssistantPage} />
 
               {/* settings */}
               <Route path="/settings" component={SettingsPage} />

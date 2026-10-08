@@ -129,3 +129,4 @@ Always adhere to clean code principles across the entire codebase:
 2. **Type Safety**: Strictly avoid `any`. Ensure clean builds with `bun run typecheck` (`tsc --noEmit`) and `bun run build`.
 3. **Clean Linting**: Zero ESLint warnings or errors (`bun run lint`).
 4. **Responsive & Accessible**: Support dark/light modes seamlessly with semantic OKLCH tokens. Ensure interactive elements include appropriate ARIA attributes, keyboard support, and tooltips.
+5. **Strict Prohibition on Browser Control for Testing**: Agents **MUST NEVER** use browser automation or control the browser (`browser_subagent`, automated URL navigation, browser clicks/interaction) to test, inspect, or verify features. Do NOT launch browser automation sessions to test UI, login flows, or functionality. Verify changes strictly using static code analysis, `bun run typecheck`, `bun run lint`, and `bun run build`. Leave all browser verification to the user.

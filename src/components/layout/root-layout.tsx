@@ -2,11 +2,14 @@ import { useEffect, useState, type ReactNode } from "react"
 import { Link, useLocation } from "wouter"
 import { NavUser } from "@/components/layout/nav-user"
 import { Header } from "@/components/layout/header"
+import { Brand } from "@/components/layout/brand"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { WorkspaceCommandDialog } from "@/features/workspaces/components/workspace-command-dialog"
 import { CreateWorkspaceDialog } from "@/features/workspaces/components/create-workspace-dialog"
 import { WorkspaceEmptyState } from "@/features/workspaces/components/workspace-empty-state"
 import { SearchCommandDialog } from "@/features/search/components/search-command-dialog"
+import { AssistantRightSidebar } from "@/features/assistant/components/assistant-right-sidebar"
+import { useAssistantStore } from "@/stores/assistant-store"
 import {
   BotMessageSquare,
   Calendar,
@@ -15,7 +18,6 @@ import {
   Info,
   KanbanSquare,
   Loader2,
-  Plus,
   Settings,
   Users,
 } from "lucide-react"
@@ -65,7 +67,10 @@ export function RootLayout({ children }: { children: ReactNode }) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
 
-  const { workspaces, activeWorkspace, isLoading } = useWorkspaces()
+  const isAssistantOpen = useAssistantStore((s) => s.isRightSidebarOpen)
+  const toggleAssistant = useAssistantStore((s) => s.toggleRightSidebarOpen)
+
+  const { workspaces, isLoading } = useWorkspaces()
 
   // Cmd+K / Ctrl+K keyboard shortcut to open Search Command Palette
   useEffect(() => {
@@ -80,9 +85,6 @@ export function RootLayout({ children }: { children: ReactNode }) {
   }, [])
 
   const hasWorkspaces = workspaces.length > 0
-  const workspaceInitial = activeWorkspace?.name
-    ? activeWorkspace.name.charAt(0).toUpperCase()
-    : "W"
 
   const handleHeaderButtonClick = () => {
     if (hasWorkspaces) {
@@ -102,27 +104,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
       >
         <Sidebar collapsible="icon">
           <SidebarHeader className="border-b border-sidebar-border/50 p-2">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={handleHeaderButtonClick}
-                  tooltip={
-                    hasWorkspaces
-                      ? `Workspace: ${activeWorkspace?.name}`
-                      : "Create Workspace"
-                  }
-                  className="cursor-pointer justify-center bg-accent ring-1"
-                >
-                  {hasWorkspaces ? (
-                    <span className="text-md font-bold text-primary">
-                      {workspaceInitial}
-                    </span>
-                  ) : (
-                    <Plus className="size-4 text-primary" />
-                  )}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <Brand />
           </SidebarHeader>
 
           <SidebarContent className="p-2">
@@ -197,6 +179,8 @@ export function RootLayout({ children }: { children: ReactNode }) {
           <Header
             onWorkspaceClick={handleHeaderButtonClick}
             onSearchClick={() => setSearchDialogOpen(true)}
+            onAssistantClick={toggleAssistant}
+            isAssistantOpen={isAssistantOpen}
           />
 
           <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-0">
@@ -216,6 +200,8 @@ export function RootLayout({ children }: { children: ReactNode }) {
             )}
           </main>
         </SidebarInset>
+
+        <AssistantRightSidebar />
       </SidebarProvider>
 
       <SearchCommandDialog

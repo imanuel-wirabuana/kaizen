@@ -57,6 +57,7 @@ function SidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
+  disableShortcut = false,
   className,
   style,
   children,
@@ -65,9 +66,17 @@ function SidebarProvider({
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  disableShortcut?: boolean
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+
+  // Keep openMobile in sync if controlled from outside
+  React.useEffect(() => {
+    if (openProp !== undefined && isMobile) {
+      setOpenMobile(openProp)
+    }
+  }, [openProp, isMobile])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -89,13 +98,28 @@ function SidebarProvider({
     [setOpenProp, open, openProp]
   )
 
+  const handleSetOpenMobile = React.useCallback(
+    (value: boolean | ((value: boolean) => boolean)) => {
+      setOpenMobile((prev) => {
+        const next = typeof value === "function" ? value(prev) : value
+        if (setOpenProp && isMobile) {
+          setOpenProp(next)
+        }
+        return next
+      })
+    },
+    [setOpenProp, isMobile]
+  )
+
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    return isMobile ? handleSetOpenMobile((open) => !open) : setOpen((open) => !open)
+  }, [isMobile, setOpen, handleSetOpenMobile])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
+    if (disableShortcut) return
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
@@ -108,7 +132,7 @@ function SidebarProvider({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+  }, [toggleSidebar, disableShortcut])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -121,10 +145,10 @@ function SidebarProvider({
       setOpen,
       isMobile,
       openMobile,
-      setOpenMobile,
+      setOpenMobile: handleSetOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, handleSetOpenMobile, toggleSidebar]
   )
 
   return (

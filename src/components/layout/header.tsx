@@ -1,12 +1,9 @@
 import type { ComponentProps } from "react"
 import { useLocation } from "wouter"
-import { ChevronDown, Search } from "lucide-react"
+import { Bot, ChevronDown, Search } from "lucide-react"
 import { cn } from "cn"
 import { Button } from "@/components/ui/button"
-import {
-  useWorkspaceStore,
-  useActiveWorkspace,
-} from "@/stores/workspace-store"
+import { useWorkspaceStore, useActiveWorkspace } from "@/stores/workspace-store"
 
 export interface HeaderProps extends ComponentProps<"header"> {
   /** Optional custom workspace name override */
@@ -15,6 +12,10 @@ export interface HeaderProps extends ComponentProps<"header"> {
   onWorkspaceClick?: () => void
   /** Callback triggered when clicking the search button; defaults to navigating to /search */
   onSearchClick?: () => void
+  /** Callback triggered when clicking the assistant button */
+  onAssistantClick?: () => void
+  /** Whether the assistant right sidebar is currently open */
+  isAssistantOpen?: boolean
 }
 
 export function Header({
@@ -22,6 +23,8 @@ export function Header({
   workspaceName,
   onWorkspaceClick,
   onSearchClick,
+  onAssistantClick,
+  isAssistantOpen = false,
   children,
   ...props
 }: HeaderProps) {
@@ -58,14 +61,14 @@ export function Header({
         <>
           {/* Left: Workspace */}
           <div className="flex min-w-0 items-center gap-1">
-            <span className="shrink-0 text-muted-foreground/80 font-medium">
+            <span className="shrink-0 font-medium text-muted-foreground/80">
               Workspace:
             </span>
             {onWorkspaceClick ? (
               <button
                 type="button"
                 onClick={onWorkspaceClick}
-                className="group inline-flex max-w-[160px] sm:max-w-[220px] items-center gap-1 truncate rounded px-1.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="group inline-flex max-w-[160px] cursor-pointer items-center gap-1 truncate rounded px-1.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:max-w-[220px]"
                 title={`Current workspace: ${resolvedWorkspaceName}`}
               >
                 <span className="truncate">{resolvedWorkspaceName}</span>
@@ -73,7 +76,7 @@ export function Header({
               </button>
             ) : (
               <span
-                className="max-w-[160px] sm:max-w-[220px] truncate text-xs font-semibold text-foreground"
+                className="max-w-[160px] truncate text-xs font-semibold text-foreground sm:max-w-[220px]"
                 title={resolvedWorkspaceName}
               >
                 {resolvedWorkspaceName}
@@ -82,23 +85,40 @@ export function Header({
           </div>
 
           {/* Middle: Brand Title (Optically centered) */}
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight text-foreground/90">
+          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight text-foreground/90">
             Kaizen
           </div>
 
-          {/* Right: Search button */}
-          <div className="flex shrink-0 items-center justify-end">
+          {/* Right: Search & Assistant buttons */}
+          <div className="flex shrink-0 items-center justify-end gap-1">
             <Button
               type="button"
               variant="ghost"
               size="icon-xs"
               onClick={handleSearchClick}
-              className="text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+              className="cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground"
               title="Search (⌘K)"
               aria-label="Search (⌘K)"
             >
               <Search className="size-3.5" />
             </Button>
+
+            {onAssistantClick && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={onAssistantClick}
+                className={cn(
+                  "cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground",
+                  isAssistantOpen && "bg-accent font-medium text-primary"
+                )}
+                title="AI Assistant"
+                aria-label="Toggle AI Assistant"
+              >
+                <Bot className="size-3.5" />
+              </Button>
+            )}
           </div>
         </>
       )}

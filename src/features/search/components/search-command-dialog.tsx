@@ -31,6 +31,8 @@ import { fetchWorkspaceBoards } from "@/features/boards/services/board-service"
 import { boardKeys } from "@/features/boards/services/board-keys"
 import { fetchWorkspaceCalendars } from "@/features/calendar/services/calendar-service"
 import { calendarKeys } from "@/features/calendar/services/calendar-keys"
+import { fetchWorkspaceThreads } from "@/features/assistant/services/assistant-service"
+import { assistantKeys } from "@/features/assistant/services/assistant-keys"
 
 export interface SearchCommandDialogProps {
   open: boolean
@@ -66,6 +68,13 @@ export function SearchCommandDialog({
   const { data: calendars = [] } = useQuery({
     queryKey: calendarKeys.list(workspaceId),
     queryFn: () => fetchWorkspaceCalendars(workspaceId!),
+    enabled: Boolean(open && workspaceId),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: threads = [] } = useQuery({
+    queryKey: assistantKeys.threadList(workspaceId),
+    queryFn: () => fetchWorkspaceThreads(workspaceId!),
     enabled: Boolean(open && workspaceId),
     staleTime: 1000 * 60 * 5,
   })
@@ -262,6 +271,42 @@ export function SearchCommandDialog({
                       )}
                     </div>
                   </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
+
+        {/* Conversations */}
+        {threads.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Conversations">
+              {threads.slice(0, 10).map((thread) => (
+                <CommandItem
+                  key={`thread-${thread.id}`}
+                  value={`chat assistant conversation ${thread.title} ${thread.description || ""}`}
+                  onSelect={() => handleNavigate(`/assistant/${thread.id}`)}
+                  className="flex cursor-pointer items-center justify-between py-2"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <BotMessageSquare className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate text-xs font-medium">
+                        {thread.title}
+                      </span>
+                      {thread.description && (
+                        <span className="truncate text-[10px] text-muted-foreground">
+                          {thread.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {thread.archived_at && (
+                    <span className="shrink-0 ml-2 rounded border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+                      Archived
+                    </span>
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
