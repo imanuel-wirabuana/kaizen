@@ -82,6 +82,7 @@ export function App() {
 
               {/* settings */}
               <Route path="/settings" component={SettingsPage} />
+              <Route path="/settings/:section" component={SettingsPage} />
 
               {/* members */}
               <Route path="/members" component={MembersPage} />

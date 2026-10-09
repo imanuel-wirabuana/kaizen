@@ -12,9 +12,12 @@ import {
   createWorkspaceRecord,
   updateWorkspaceRecord,
   archiveWorkspaceRecord,
+  deleteWorkspaceRecord,
+  transferWorkspaceOwnershipRecord,
   subscribeToWorkspaceChanges,
 } from "@/features/workspaces/services/workspace-service"
 import { workspaceKeys } from "@/features/workspaces/services/workspace-keys"
+import { memberKeys } from "@/features/members/services/member-keys"
 import type { Workspace, WorkspaceSettings } from "@/types/workspace"
 
 const EMPTY_WORKSPACES: Workspace[] = []
@@ -202,6 +205,74 @@ export function useWorkspaces() {
     return archiveMutation.mutateAsync(id)
   }
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return deleteWorkspaceRecord(id)
+    },
+    onSuccess: (success, id) => {
+      if (!success || !user) return
+      const target = workspaces.find((w) => w.id === id)
+      queryClient.setQueryData<Workspace[]>(
+        workspaceKeys.list(user.id),
+        (old) => old?.filter((w) => w.id !== id) ?? []
+      )
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.list(user.id) })
+      removeWorkspace(id)
+      toast.success("Workspace deleted", {
+        description: target
+          ? `"${target.name}" has been permanently deleted.`
+          : "Workspace has been permanently deleted.",
+      })
+    },
+    onError: (error) => {
+      toast.error("Failed to delete workspace", {
+        description: (error as Error).message || "Unable to delete workspace.",
+      })
+    },
+  })
+
+  const transferOwnershipMutation = useMutation({
+    mutationFn: async ({
+      workspaceId,
+      newOwnerId,
+    }: {
+      workspaceId: number
+      newOwnerId: string
+    }) => {
+      if (!user) throw new Error("You must be logged in to transfer ownership")
+      return transferWorkspaceOwnershipRecord(workspaceId, user.id, newOwnerId)
+    },
+    onSuccess: (updated) => {
+      if (!user) return
+      queryClient.setQueryData<Workspace[]>(
+        workspaceKeys.list(user.id),
+        (old) => old?.map((w) => (w.id === updated.id ? updated : w)) ?? [updated]
+      )
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.list(user.id) })
+      void queryClient.invalidateQueries({ queryKey: memberKeys.list(updated.id) })
+      upsertWorkspace(updated)
+      toast.success("Ownership transferred", {
+        description: `Ownership of "${updated.name}" has been transferred successfully.`,
+      })
+    },
+    onError: (error) => {
+      toast.error("Failed to transfer ownership", {
+        description: (error as Error).message || "Unable to transfer ownership.",
+      })
+    },
+  })
+
+  const deleteWorkspace = async (id: number): Promise<boolean> => {
+    return deleteMutation.mutateAsync(id)
+  }
+
+  const transferOwnership = async (
+    workspaceId: number,
+    newOwnerId: string
+  ): Promise<Workspace> => {
+    return transferOwnershipMutation.mutateAsync({ workspaceId, newOwnerId })
+  }
+
   return {
     workspaces,
     activeWorkspace,
@@ -211,6 +282,11 @@ export function useWorkspaces() {
     createWorkspace,
     updateWorkspace,
     archiveWorkspace,
+    deleteWorkspace,
+    transferOwnership,
+    isArchiving: archiveMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+    isTransferring: transferOwnershipMutation.isPending,
     setActiveWorkspaceId,
     refreshWorkspaces,
   }

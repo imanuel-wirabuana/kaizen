@@ -120,10 +120,18 @@ export async function updateWorkspaceRecord(
   id: number,
   updates: Partial<Workspace>
 ): Promise<Workspace> {
+  const sanitizedUpdates = { ...updates }
+  if (sanitizedUpdates.settings && typeof sanitizedUpdates.settings === "object") {
+    const cleanSettings = { ...(sanitizedUpdates.settings as Record<string, unknown>) }
+    delete cleanSettings.owner_profile
+    delete cleanSettings.owner_info
+    sanitizedUpdates.settings = cleanSettings
+  }
+
   const { data, error } = await supabase
     .from("workspaces")
     .update({
-      ...updates,
+      ...sanitizedUpdates,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -153,6 +161,76 @@ export async function archiveWorkspaceRecord(id: number): Promise<boolean> {
   }
 
   return true
+}
+
+/**
+ * Permanently delete a workspace from Supabase.
+ */
+export async function deleteWorkspaceRecord(id: number): Promise<boolean> {
+  const { error } = await supabase.from("workspaces").delete().eq("id", id)
+
+  if (error) {
+    throw new Error(`Failed to delete workspace: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Transfer workspace ownership to another user.
+ */
+export async function transferWorkspaceOwnershipRecord(
+  workspaceId: number,
+  currentOwnerId: string,
+  newOwnerId: string
+): Promise<Workspace> {
+  if (!newOwnerId || newOwnerId === currentOwnerId) {
+    throw new Error("Invalid new owner ID specified.")
+  }
+
+  // 1. Update the workspace owner
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({
+      owner_id: newOwnerId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", workspaceId)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to transfer workspace ownership: ${error.message}`)
+  }
+
+  // 2. Ensure previous owner has an active workspace_member record so they remain in the workspace
+  try {
+    const { data: existingMember } = await supabase
+      .from("workspace_members")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", currentOwnerId)
+      .maybeSingle()
+
+    if (!existingMember) {
+      await supabase.from("workspace_members").insert({
+        workspace_id: workspaceId,
+        user_id: currentOwnerId,
+        permissions: {
+          workspace: { read: true, update: true },
+          zenbox: { read: true, create: true, update: true, delete: true },
+          boards: { read: true, create: true, update: true, delete: true },
+          calendars: { read: true, create: true, update: true, delete: true },
+          assistant: { read: true, create: true, update: true, delete: true },
+          members: { read: true, create: true, update: true, delete: true },
+        },
+      })
+    }
+  } catch (err) {
+    console.warn("Could not ensure member record for former owner:", err)
+  }
+
+  return data as Workspace
 }
 
 let activeChannel: RealtimeChannel | null = null

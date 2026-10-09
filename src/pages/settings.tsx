@@ -1,32 +1,44 @@
-import { useState, useEffect } from "react"
-import { useUser } from "@clerk/clerk-react"
-import { Moon, Sun, Monitor, Check, Save, Lock } from "lucide-react"
-import { useTheme } from "@/components/theme-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
+import { useRoute, useLocation } from "wouter"
+import { PageSidebarLayout } from "@/components/layout/page-sidebar-layout"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
 import { AccessDeniedState } from "@/features/members/components/access-denied-state"
+import {
+  SettingsSidebar,
+  type SettingsSection,
+} from "@/features/settings/components/settings-sidebar"
+import { GeneralSettingsPanel } from "@/features/settings/components/general-settings-panel"
+import { AppearanceSettingsPanel } from "@/features/settings/components/appearance-settings-panel"
+import { DangerZoneSettingsPanel } from "@/features/settings/components/danger-zone-settings-panel"
+import { ImportSettingsDialog } from "@/features/settings/components/import-settings-dialog"
+import { exportWorkspaceSettings } from "@/features/settings/services/settings-import-export"
+import { toast } from "@/components/ui/toast"
+import type { Workspace } from "@/types/workspace"
 
 export function SettingsPage() {
-  const { theme, setTheme } = useTheme()
-  const { user } = useUser()
-  const { activeWorkspace, updateWorkspace } = useWorkspaces()
+  const [, setLocation] = useLocation()
+  const [matchSection, sectionParams] = useRoute("/settings/:section")
+
+  const {
+    activeWorkspace,
+    updateWorkspace,
+    archiveWorkspace,
+    deleteWorkspace,
+    transferOwnership,
+  } = useWorkspaces()
+
   const { canRead, canUpdate, isLoading: isPermsLoading } = useWorkspacePermissions()
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
-  const [name, setName] = useState(activeWorkspace?.name || "")
-  const [description, setDescription] = useState(activeWorkspace?.description || "")
-  const [isSaving, setIsSaving] = useState(false)
+  // Determine active section from URL or default to "general"
+  const rawSection = matchSection && sectionParams?.section ? sectionParams.section : "general"
+  const activeSection: SettingsSection =
+    rawSection === "appearance" || rawSection === "danger" ? rawSection : "general"
 
-  useEffect(() => {
-    if (activeWorkspace) {
-      setName(activeWorkspace.name)
-      setDescription(activeWorkspace.description || "")
-    }
-  }, [activeWorkspace])
+  const handleSelectSection = (section: SettingsSection) => {
+    setLocation(`/settings/${section}`)
+  }
 
   // 1. workspace.read guard
   if (!isPermsLoading && !canRead("workspace")) {
@@ -38,200 +50,106 @@ export function SettingsPage() {
     )
   }
 
-  const hasUpdate = canUpdate("workspace")
-
-  const handleSaveWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!activeWorkspace || !name.trim() || !hasUpdate) return
-
-    try {
-      setIsSaving(true)
-      await updateWorkspace(activeWorkspace.id, {
-        name: name.trim(),
-        description: description.trim() || null,
+  // Handle Export Settings (JSON)
+  const handleExport = () => {
+    if (!activeWorkspace) {
+      toast.error("Export unavailable", {
+        description: "No active workspace is currently selected.",
       })
-    } finally {
-      setIsSaving(false)
+      return
     }
+    exportWorkspaceSettings(activeWorkspace)
+  }
+
+  // Handle Import Settings (JSON)
+  const handleApplyImport = async (imported: {
+    name?: string
+    description?: string | null
+    settings: Record<string, unknown>
+  }) => {
+    if (!activeWorkspace) return
+
+    const mergedSettings = {
+      ...(activeWorkspace.settings || {}),
+      ...(imported.settings || {}),
+    }
+
+    const updates: Partial<Workspace> = {
+      settings: mergedSettings,
+    }
+
+    if (imported.name) {
+      updates.name = imported.name.trim()
+    }
+    if (imported.description !== undefined) {
+      updates.description = imported.description?.trim() || null
+    }
+
+    await updateWorkspace(activeWorkspace.id, updates)
+    toast.success("Settings applied", {
+      description: "Workspace configuration has been updated from JSON.",
+    })
+  }
+
+  // Danger Zone actions
+  const handleArchive = async (id: number) => {
+    const success = await archiveWorkspace(id)
+    if (success) {
+      setLocation("/")
+    }
+    return success
+  }
+
+  const handleTransfer = async (workspaceId: number, newOwnerId: string) => {
+    return transferOwnership(workspaceId, newOwnerId)
+  }
+
+  const handleDelete = async (id: number) => {
+    const success = await deleteWorkspace(id)
+    if (success) {
+      setLocation("/")
+    }
+    return success
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full p-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your account preferences, appearance, and workspace options.
-        </p>
-      </div>
+    <PageSidebarLayout
+      className="bg-card"
+      sidebar={
+        <SettingsSidebar
+          activeSection={activeSection}
+          onSelectSection={handleSelectSection}
+          onImportClick={() => setIsImportOpen(true)}
+          onExportClick={handleExport}
+          workspaceName={activeWorkspace?.name}
+        />
+      }
+    >
+      {activeSection === "general" && (
+        <GeneralSettingsPanel
+          workspace={activeWorkspace}
+          canUpdate={canUpdate("workspace")}
+          onUpdateWorkspace={updateWorkspace}
+        />
+      )}
 
-      {/* Workspace Details & Edit Form */}
-      <Card className="p-5 flex flex-col gap-4 shadow-2xs border-border/80">
-        <div className="flex items-center justify-between border-b border-border/50 pb-3">
-          <div>
-            <h3 className="text-sm font-semibold">Active Workspace</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Configure name and details for this workspace.
-            </p>
-          </div>
-          {!hasUpdate ? (
-            <Badge variant="secondary" className="gap-1 text-xs">
-              <Lock className="size-3" />
-              <span>Read-only</span>
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs">
-              Standard Tier
-            </Badge>
-          )}
-        </div>
+      {activeSection === "appearance" && <AppearanceSettingsPanel />}
 
-        <form onSubmit={handleSaveWorkspace} className="flex flex-col gap-4 pt-1">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="ws-name" className="text-xs font-medium text-foreground">
-              Workspace Name
-            </label>
-            <Input
-              id="ws-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Acme Studio, Kaizen Core"
-              className="text-xs bg-card"
-              disabled={!hasUpdate || isSaving}
-              required
-            />
-          </div>
+      {activeSection === "danger" && (
+        <DangerZoneSettingsPanel
+          workspace={activeWorkspace}
+          onArchiveWorkspace={handleArchive}
+          onTransferOwnership={handleTransfer}
+          onDeleteWorkspace={handleDelete}
+        />
+      )}
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="ws-desc" className="text-xs font-medium text-foreground">
-              Description
-            </label>
-            <Textarea
-              id="ws-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this workspace's purpose..."
-              className="text-xs min-h-[70px] bg-card resize-none"
-              disabled={!hasUpdate || isSaving}
-            />
-          </div>
-
-          {hasUpdate ? (
-            <div className="flex justify-end pt-1">
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSaving || !name.trim()}
-                className="gap-1.5 cursor-pointer"
-              >
-                <Save className="size-3.5" />
-                <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-              <Lock className="size-3" />
-              <span>You have read-only access to this workspace&apos;s settings.</span>
-            </div>
-          )}
-        </form>
-      </Card>
-
-      {/* Appearance Section */}
-      <Card className="p-5 flex flex-col gap-4 shadow-2xs border-border/80">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold">Appearance</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Customize the look and feel of your Kaizen workspace.
-            </p>
-          </div>
-          <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-            Press <kbd className="font-semibold">d</kbd> to toggle
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 pt-2">
-          <Button
-            type="button"
-            variant={theme === "light" ? "default" : "outline"}
-            onClick={() => setTheme("light")}
-            className="flex items-center justify-center gap-2 h-10 text-xs cursor-pointer"
-          >
-            <Sun className="size-4" />
-            Light
-            {theme === "light" && <Check className="size-3.5 ml-auto" />}
-          </Button>
-          <Button
-            type="button"
-            variant={theme === "dark" ? "default" : "outline"}
-            onClick={() => setTheme("dark")}
-            className="flex items-center justify-center gap-2 h-10 text-xs cursor-pointer"
-          >
-            <Moon className="size-4" />
-            Dark
-            {theme === "dark" && <Check className="size-3.5 ml-auto" />}
-          </Button>
-          <Button
-            type="button"
-            variant={theme === "system" ? "default" : "outline"}
-            onClick={() => setTheme("system")}
-            className="flex items-center justify-center gap-2 h-10 text-xs cursor-pointer"
-          >
-            <Monitor className="size-4" />
-            System
-            {theme === "system" && <Check className="size-3.5 ml-auto" />}
-          </Button>
-        </div>
-      </Card>
-
-      {/* Keyboard Shortcuts Reference */}
-      <Card className="p-5 flex flex-col gap-3 shadow-2xs border-border/80">
-        <h3 className="text-sm font-semibold">Keyboard Shortcuts</h3>
-        <div className="divide-y divide-border/50 text-xs">
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">Quick Action Command Palette</span>
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-              Cmd + K / Ctrl + K
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">Toggle Light / Dark theme</span>
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-              d
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">Navigate to Zenbox</span>
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-              g then z
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground">Close modals and dialogs</span>
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-              Esc
-            </kbd>
-          </div>
-        </div>
-      </Card>
-
-      {/* Account Info */}
-      <Card className="p-5 flex flex-col gap-3 shadow-2xs border-border/80">
-        <h3 className="text-sm font-semibold">Account Profile</h3>
-        <div className="flex items-center justify-between text-xs">
-          <div>
-            <p className="font-medium text-foreground">
-              {user?.fullName || user?.username || "Authenticated User"}
-            </p>
-            <p className="text-muted-foreground mt-0.5">
-              {user?.primaryEmailAddress?.emailAddress || "user@kaizen.app"}
-            </p>
-          </div>
-          <Badge variant="outline">Clerk Authenticated</Badge>
-        </div>
-      </Card>
-    </div>
+      <ImportSettingsDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onApplySettings={handleApplyImport}
+      />
+    </PageSidebarLayout>
   )
 }
 

@@ -285,39 +285,25 @@ export function useWorkspaceMembers() {
       const isCurrentUserOwner = Boolean(
         user && activeWorkspace.owner_id === user.id
       )
-      const settings = (activeWorkspace.settings as Record<string, unknown>) || {}
-      const profiles =
-        (settings.profiles as Record<string, UserProfileData>) || {}
-      const ownerStoredProfile =
-        (settings.owner_profile as UserProfileData | undefined) ||
-        profiles[activeWorkspace.owner_id]
 
+      // Owner is determined by activeWorkspace.owner_id; Clerk is the single source of truth
       const ownerName = isCurrentUserOwner
         ? user?.fullName ||
           [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
           user?.username ||
           "You (Workspace Owner)"
-        : ownerStoredProfile?.displayName || "Workspace Owner"
+        : "Workspace Owner"
 
       const ownerEmail = isCurrentUserOwner
         ? user?.primaryEmailAddress?.emailAddress || "owner@kaizen.app"
-        : ownerStoredProfile?.email || "owner@kaizen.app"
+        : "owner@kaizen.app"
 
-      const ownerAvatar = isCurrentUserOwner
-        ? user?.imageUrl
-        : ownerStoredProfile?.avatarUrl
-
-      const computedOwnerInitials = ownerName
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join("")
+      const ownerAvatar = isCurrentUserOwner ? user?.imageUrl : undefined
 
       const ownerInitials =
         isCurrentUserOwner && user?.firstName
           ? `${user.firstName[0]}${user.lastName ? user.lastName[0] : ""}`.toUpperCase()
-          : computedOwnerInitials || "OW"
+          : "OW"
 
       list.push({
         id: -1,

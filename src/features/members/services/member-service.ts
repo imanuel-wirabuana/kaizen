@@ -232,32 +232,57 @@ export async function syncWorkspaceUserProfile({
 
     if (wsData) {
       const currentSettings = (wsData.settings as Record<string, unknown>) || {}
-      const existingProfiles =
-        (currentSettings.profiles as Record<string, UserProfileData>) || {}
-      const existingProfile = existingProfiles[user.id]
+      let hasLegacyOwnerInfo = false
+      const cleanSettings = { ...currentSettings }
 
-      const needsProfileUpdate =
-        !existingProfile ||
-        existingProfile.displayName !== displayName ||
-        existingProfile.email !== email ||
-        existingProfile.avatarUrl !== avatarUrl
+      // Proactively clean up any legacy owner_profile from workspace.settings
+      if ("owner_profile" in cleanSettings) {
+        delete cleanSettings.owner_profile
+        hasLegacyOwnerInfo = true
+      }
 
-      if (needsProfileUpdate) {
-        const nextSettings: Record<string, unknown> = {
-          ...currentSettings,
-          profiles: {
-            ...existingProfiles,
-            [user.id]: userProfile,
-          },
+      // Also remove owner entry from settings.profiles if present
+      if (cleanSettings.profiles && typeof cleanSettings.profiles === "object") {
+        const profilesObj = { ...(cleanSettings.profiles as Record<string, UserProfileData>) }
+        if (wsData.owner_id in profilesObj) {
+          delete profilesObj[wsData.owner_id]
+          cleanSettings.profiles = profilesObj
+          hasLegacyOwnerInfo = true
         }
+      }
 
-        if (isOwner || wsData.owner_id === user.id) {
-          nextSettings.owner_profile = userProfile
+      const isUserTheOwner = isOwner || wsData.owner_id === user.id
+
+      if (!isUserTheOwner) {
+        const existingProfiles =
+          (cleanSettings.profiles as Record<string, UserProfileData>) || {}
+        const existingProfile = existingProfiles[user.id]
+
+        const needsProfileUpdate =
+          !existingProfile ||
+          existingProfile.displayName !== displayName ||
+          existingProfile.email !== email ||
+          existingProfile.avatarUrl !== avatarUrl
+
+        if (needsProfileUpdate || hasLegacyOwnerInfo) {
+          await supabase
+            .from("workspaces")
+            .update({
+              settings: {
+                ...cleanSettings,
+                profiles: {
+                  ...existingProfiles,
+                  [user.id]: userProfile,
+                },
+              },
+            })
+            .eq("id", workspaceId)
         }
-
+      } else if (hasLegacyOwnerInfo) {
+        // Persist clean settings without owner data
         await supabase
           .from("workspaces")
-          .update({ settings: nextSettings })
+          .update({ settings: cleanSettings })
           .eq("id", workspaceId)
       }
     }
