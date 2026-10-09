@@ -54,7 +54,7 @@
     "@clerk/themes": "^2.4.57",
     "@eslint/js": "^10",
     "@types/lodash.throttle": "^4.1.9",
-    "@types/node": "^24",
+    "@types/node": "^26.6.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",

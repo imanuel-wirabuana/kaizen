@@ -2,6 +2,10 @@ export const config = {
   runtime: "edge",
 }
 
+declare const process: {
+  env: Record<string, string | undefined>
+}
+
 const CLERK_FRONTEND_API = "https://frontend-api.clerk.dev"
 
 export default async function handler(req: Request): Promise<Response> {
