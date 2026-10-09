@@ -16,20 +16,11 @@ if (!PUBLISHABLE_KEY) {
   )
 }
 
-// Auto-route through /__clerk proxy for production keys, or use explicit VITE_CLERK_PROXY_URL
-const PROXY_URL =
-  import.meta.env.VITE_CLERK_PROXY_URL ||
-  (PUBLISHABLE_KEY.startsWith("pk_live_") ? "/__clerk" : undefined)
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ClerkProviderWithTheme
-          publishableKey={PUBLISHABLE_KEY}
-          proxyUrl={PROXY_URL}
-          afterSignOutUrl="/"
-        >
+        <ClerkProviderWithTheme publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
           <App />
         </ClerkProviderWithTheme>
       </ThemeProvider>

@@ -6,14 +6,12 @@ import { useTheme } from "@/components/theme-provider"
 interface ClerkProviderWithThemeProps {
   children: ReactNode
   publishableKey: string
-  proxyUrl?: string
   afterSignOutUrl?: string
 }
 
 export function ClerkProviderWithTheme({
   children,
   publishableKey,
-  proxyUrl,
   afterSignOutUrl = "/",
 }: ClerkProviderWithThemeProps) {
   const { theme } = useTheme()
@@ -42,7 +40,6 @@ export function ClerkProviderWithTheme({
   return (
     <ClerkProvider
       publishableKey={publishableKey}
-      proxyUrl={proxyUrl}
       afterSignOutUrl={afterSignOutUrl}
       appearance={{
         baseTheme: isDark ? dark : undefined,
