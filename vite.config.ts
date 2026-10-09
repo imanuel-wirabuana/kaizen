@@ -11,4 +11,12 @@ export default defineConfig({
       "@": resolve(import.meta.dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/__clerk": {
+        target: "https://kaizen-33.vercel.app",
+        changeOrigin: true,
+      },
+    },
+  },
 })
