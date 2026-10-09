@@ -19,16 +19,34 @@ import {
   type ChatMessage,
 } from "@/features/assistant/services/ai-client"
 import type { AiMessage, AiThread } from "@/types/assistant"
+import {
+  buildAssistantSystemPrompt,
+  DEFAULT_BASE_SYSTEM_PROMPT,
+  type AssistantKnowledgeContext,
+  type AssistantCurrentUserContext,
+} from "@/features/assistant/services/system-prompt"
+import { useAssistantKnowledge } from "@/features/assistant/hooks/use-assistant-knowledge"
 
-const SYSTEM_PROMPT =
-  "You are Kaizen Assistant, a friendly, intelligent, and highly practical AI coach embedded inside the Kaizen productivity platform. You embody the philosophy of Kaizen (continuous, compounding 1% improvement). Keep answers clear, well-structured, formatted with markdown where helpful, and immediately actionable."
+export {
+  buildAssistantSystemPrompt,
+  DEFAULT_BASE_SYSTEM_PROMPT,
+  type AssistantKnowledgeContext,
+  type AssistantCurrentUserContext,
+}
 
 export interface UseAiChatProps {
   threadId: number | null
   thread: AiThread | null
+  systemPromptOverride?: string
+  customInstructions?: string | null
 }
 
-export function useAiChat({ threadId, thread }: UseAiChatProps) {
+export function useAiChat({
+  threadId,
+  thread,
+  systemPromptOverride,
+  customInstructions,
+}: UseAiChatProps) {
   const { user } = useUser()
   const activeWorkspace = useActiveWorkspace()
   const workspaceId = activeWorkspace?.id
@@ -39,6 +57,13 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamedContent, setStreamedContent] = useState("")
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Live workspace knowledge context & dynamic system prompt
+  const { systemPrompt: dynamicSystemPrompt, knowledgeContext } =
+    useAssistantKnowledge({
+      thread,
+      customInstructions,
+    })
 
   // React Query: Cached Messages
   const {
@@ -261,11 +286,14 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
           },
         ]
 
+        const effectiveSystemPrompt =
+          systemPromptOverride || dynamicSystemPrompt || DEFAULT_BASE_SYSTEM_PROMPT
+
         // 5. Stream Response from AI Provider
         const result = streamAssistantChat({
           modelName: effectiveModel,
           messages: apiMessages,
-          systemPrompt: SYSTEM_PROMPT,
+          systemPrompt: effectiveSystemPrompt,
           abortSignal: abortController.signal,
         })
 
@@ -336,6 +364,8 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
       workspaceId,
       activeWorkspace,
       upsertThread,
+      dynamicSystemPrompt,
+      systemPromptOverride,
     ]
   )
 
@@ -372,5 +402,7 @@ export function useAiChat({ threadId, thread }: UseAiChatProps) {
     clearMessages: clearMutation.mutateAsync,
     isClearing: clearMutation.isPending,
     refreshMessages,
+    systemPrompt: systemPromptOverride || dynamicSystemPrompt,
+    knowledgeContext,
   }
 }

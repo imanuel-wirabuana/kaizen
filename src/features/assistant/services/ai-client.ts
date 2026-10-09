@@ -4,7 +4,7 @@ import type { AiModel } from "@/types/assistant"
 
 export const AI_CONFIG = {
   baseURL: "https://imanuelcdw-dawra.hf.space/v1",
-  apiKey: "sk-6bfffd4f7d73aaad-ya5xl7-2a4d97cf",
+  apiKey: "sk-6bfffd4f7d73aaad-b8j4vt-d126e60c",
   defaultModel: "kaizen",
 } as const
 
@@ -80,7 +80,9 @@ export async function fetchAiModels(): Promise<AiModel[]> {
     })
 
     if (!response.ok) {
-      console.warn(`Failed to fetch models: ${response.status} ${response.statusText}`)
+      console.warn(
+        `Failed to fetch models: ${response.status} ${response.statusText}`
+      )
       return DEFAULT_AI_MODELS
     }
 
@@ -169,11 +171,11 @@ export async function generateThreadSummary(
     const firstLine = cleanPrompt.split("\n")[0].trim()
     const words = firstLine.split(/\s+/).slice(0, 6).join(" ")
     const fallbackTitle =
-      words.length > 40 ? `${words.slice(0, 37)}...` : words || "New Conversation"
+      words.length > 40
+        ? `${words.slice(0, 37)}...`
+        : words || "New Conversation"
     const fallbackDesc =
-      cleanPrompt.length > 120
-        ? `${cleanPrompt.slice(0, 117)}...`
-        : cleanPrompt
+      cleanPrompt.length > 120 ? `${cleanPrompt.slice(0, 117)}...` : cleanPrompt
 
     return {
       title: fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1),

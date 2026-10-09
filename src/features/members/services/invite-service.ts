@@ -3,6 +3,7 @@ import type {
   WorkspaceInvite,
   CreateInviteInput,
   WorkspaceMember,
+  WorkspacePermissions,
 } from "@/types/member"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
@@ -323,6 +324,52 @@ export async function revokeInviteRecord(inviteId: number): Promise<boolean> {
   return true
 }
 
+/**
+ * Update permissions configured for an invite code.
+ */
+export async function updateInvitePermissionsRecord(
+  inviteId: number,
+  permissions: WorkspacePermissions
+): Promise<WorkspaceInvite> {
+  return updateInviteRecord(inviteId, { permissions })
+}
+
+/**
+ * Update invite settings and permissions.
+ */
+export async function updateInviteRecord(
+  inviteId: number,
+  updates: {
+    permissions?: WorkspacePermissions
+    maxUses?: number
+    expiredAt?: string | null
+  }
+): Promise<WorkspaceInvite> {
+  const updatePayload: Record<string, unknown> = {}
+  if (updates.permissions !== undefined) {
+    updatePayload.permissions = updates.permissions
+  }
+  if (updates.maxUses !== undefined) {
+    updatePayload.max_uses = updates.maxUses
+  }
+  if (updates.expiredAt !== undefined) {
+    updatePayload.expired_at = updates.expiredAt
+  }
+
+  const { data, error } = await supabase
+    .from("workspace_invites")
+    .update(updatePayload)
+    .eq("id", inviteId)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to update invite: ${error.message}`)
+  }
+
+  return data as WorkspaceInvite
+}
+
 let activeInviteChannel: RealtimeChannel | null = null
 let currentInviteWorkspaceId: number | null = null
 const activeInviteHandlers = new Set<InviteRealtimeHandlers>()
@@ -402,4 +449,104 @@ export function subscribeToInviteChanges(
       currentInviteWorkspaceId = null
     }
   }
+}
+
+/**
+ * Restore a revoked invite record.
+ */
+export async function restoreInviteRecord(inviteId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from("workspace_invites")
+    .update({
+      revoked_at: null,
+    })
+    .eq("id", inviteId)
+
+  if (error) {
+    throw new Error(`Failed to restore invite: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Permanently delete an invite record that has already been revoked.
+ */
+export async function deleteInviteRecord(inviteId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from("workspace_invites")
+    .delete()
+    .eq("id", inviteId)
+    .not("revoked_at", "is", null)
+
+  if (error) {
+    throw new Error(`Failed to delete invite: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Revoke multiple invite records in batch.
+ */
+export async function batchRevokeInviteRecords(
+  inviteIds: number[]
+): Promise<boolean> {
+  if (inviteIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_invites")
+    .update({
+      revoked_at: new Date().toISOString(),
+    })
+    .in("id", inviteIds)
+
+  if (error) {
+    throw new Error(`Failed to batch revoke invites: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Restore multiple revoked invite records in batch.
+ */
+export async function batchRestoreInviteRecords(
+  inviteIds: number[]
+): Promise<boolean> {
+  if (inviteIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_invites")
+    .update({
+      revoked_at: null,
+    })
+    .in("id", inviteIds)
+
+  if (error) {
+    throw new Error(`Failed to batch restore invites: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Permanently delete multiple invite records that have already been revoked.
+ */
+export async function batchDeleteInviteRecords(
+  inviteIds: number[]
+): Promise<boolean> {
+  if (inviteIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_invites")
+    .delete()
+    .in("id", inviteIds)
+    .not("revoked_at", "is", null)
+
+  if (error) {
+    throw new Error(`Failed to batch delete invites: ${error.message}`)
+  }
+
+  return true
 }

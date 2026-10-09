@@ -8,6 +8,11 @@ import {
   fetchWorkspaceMembers,
   updateMemberPermissionsRecord,
   revokeMemberRecord,
+  restoreMemberRecord,
+  deleteMemberRecord,
+  batchRevokeMemberRecords,
+  batchRestoreMemberRecords,
+  batchDeleteMemberRecords,
   subscribeToMemberChanges,
   syncWorkspaceUserProfile,
   type UserProfileData,
@@ -146,6 +151,131 @@ export function useWorkspaceMembers() {
     },
   })
 
+  const restoreMemberMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      return restoreMemberRecord(memberId)
+    },
+    onSuccess: (_, memberId) => {
+      queryClient.setQueryData<WorkspaceMember[]>(
+        memberKeys.list(workspaceId),
+        (old) =>
+          old?.map((m) =>
+            m.id === memberId ? { ...m, revoked_at: null } : m
+          ) ?? []
+      )
+      void queryClient.invalidateQueries({
+        queryKey: memberKeys.list(workspaceId),
+      })
+      toast.success("Member access restored", {
+        description: "The collaborator can access the workspace again.",
+      })
+    },
+    onError: (err) => {
+      toast.error("Failed to restore member", {
+        description: (err as Error).message || "Unable to restore access.",
+      })
+    },
+  })
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      return deleteMemberRecord(memberId)
+    },
+    onSuccess: (_, memberId) => {
+      queryClient.setQueryData<WorkspaceMember[]>(
+        memberKeys.list(workspaceId),
+        (old) => old?.filter((m) => m.id !== memberId) ?? []
+      )
+      void queryClient.invalidateQueries({
+        queryKey: memberKeys.list(workspaceId),
+      })
+      toast.success("Member deleted", {
+        description: "The collaborator record has been permanently deleted.",
+      })
+    },
+    onError: (err) => {
+      toast.error("Failed to delete member", {
+        description: (err as Error).message || "Unable to delete member.",
+      })
+    },
+  })
+
+  const batchRevokeMutation = useMutation({
+    mutationFn: async (memberIds: number[]) => {
+      return batchRevokeMemberRecords(memberIds)
+    },
+    onSuccess: (_, memberIds) => {
+      const nowIso = new Date().toISOString()
+      queryClient.setQueryData<WorkspaceMember[]>(
+        memberKeys.list(workspaceId),
+        (old) =>
+          old?.map((m) =>
+            memberIds.includes(m.id) ? { ...m, revoked_at: nowIso } : m
+          ) ?? []
+      )
+      void queryClient.invalidateQueries({
+        queryKey: memberKeys.list(workspaceId),
+      })
+      toast.success("Members revoked", {
+        description: `${memberIds.length} collaborators have been revoked.`,
+      })
+    },
+    onError: (err) => {
+      toast.error("Failed to batch revoke", {
+        description: (err as Error).message || "Unable to revoke members.",
+      })
+    },
+  })
+
+  const batchRestoreMutation = useMutation({
+    mutationFn: async (memberIds: number[]) => {
+      return batchRestoreMemberRecords(memberIds)
+    },
+    onSuccess: (_, memberIds) => {
+      queryClient.setQueryData<WorkspaceMember[]>(
+        memberKeys.list(workspaceId),
+        (old) =>
+          old?.map((m) =>
+            memberIds.includes(m.id) ? { ...m, revoked_at: null } : m
+          ) ?? []
+      )
+      void queryClient.invalidateQueries({
+        queryKey: memberKeys.list(workspaceId),
+      })
+      toast.success("Members restored", {
+        description: `${memberIds.length} collaborators have been restored.`,
+      })
+    },
+    onError: (err) => {
+      toast.error("Failed to batch restore", {
+        description: (err as Error).message || "Unable to restore members.",
+      })
+    },
+  })
+
+  const batchDeleteMutation = useMutation({
+    mutationFn: async (memberIds: number[]) => {
+      return batchDeleteMemberRecords(memberIds)
+    },
+    onSuccess: (_, memberIds) => {
+      queryClient.setQueryData<WorkspaceMember[]>(
+        memberKeys.list(workspaceId),
+        (old) => old?.filter((m) => !memberIds.includes(m.id)) ?? []
+      )
+      void queryClient.invalidateQueries({
+        queryKey: memberKeys.list(workspaceId),
+      })
+      toast.success("Members deleted", {
+        description: `${memberIds.length} collaborators permanently deleted.`,
+      })
+    },
+    onError: (err) => {
+      toast.error("Failed to batch delete", {
+        description: (err as Error).message || "Unable to delete members.",
+      })
+    },
+  })
+
   // Format owner + collaborators (memoized for referential stability)
   const membersWithProfiles: WorkspaceMemberProfile[] = useMemo(() => {
     const list: WorkspaceMemberProfile[] = []
@@ -273,8 +403,24 @@ export function useWorkspaceMembers() {
       updatePermissionsMutation.mutateAsync({ memberId, permissions }),
     revokeMember: (memberId: number) =>
       revokeMemberMutation.mutateAsync(memberId),
+    restoreMember: (memberId: number) =>
+      restoreMemberMutation.mutateAsync(memberId),
+    deleteMember: (memberId: number) =>
+      deleteMemberMutation.mutateAsync(memberId),
+    batchRevokeMembers: (memberIds: number[]) =>
+      batchRevokeMutation.mutateAsync(memberIds),
+    batchRestoreMembers: (memberIds: number[]) =>
+      batchRestoreMutation.mutateAsync(memberIds),
+    batchDeleteMembers: (memberIds: number[]) =>
+      batchDeleteMutation.mutateAsync(memberIds),
     isUpdating: updatePermissionsMutation.isPending,
     isRevoking: revokeMemberMutation.isPending,
+    isRestoring: restoreMemberMutation.isPending,
+    isDeleting: deleteMemberMutation.isPending,
+    isBatchOperating:
+      batchRevokeMutation.isPending ||
+      batchRestoreMutation.isPending ||
+      batchDeleteMutation.isPending,
     refreshMembers,
   }
 }

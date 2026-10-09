@@ -300,3 +300,106 @@ export async function syncWorkspaceUserProfile({
   }
 }
 
+/**
+ * Restore a revoked member's access.
+ */
+export async function restoreMemberRecord(memberId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from("workspace_members")
+    .update({
+      revoked_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", memberId)
+
+  if (error) {
+    throw new Error(`Failed to restore member: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Permanently delete a member record that has already been revoked.
+ */
+export async function deleteMemberRecord(memberId: number): Promise<boolean> {
+  const { error } = await supabase
+    .from("workspace_members")
+    .delete()
+    .eq("id", memberId)
+    .not("revoked_at", "is", null)
+
+  if (error) {
+    throw new Error(`Failed to delete member: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Revoke multiple members in batch.
+ */
+export async function batchRevokeMemberRecords(
+  memberIds: number[]
+): Promise<boolean> {
+  if (memberIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_members")
+    .update({
+      revoked_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", memberIds)
+
+  if (error) {
+    throw new Error(`Failed to batch revoke members: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Restore multiple revoked members in batch.
+ */
+export async function batchRestoreMemberRecords(
+  memberIds: number[]
+): Promise<boolean> {
+  if (memberIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_members")
+    .update({
+      revoked_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", memberIds)
+
+  if (error) {
+    throw new Error(`Failed to batch restore members: ${error.message}`)
+  }
+
+  return true
+}
+
+/**
+ * Permanently delete multiple members that have already been revoked.
+ */
+export async function batchDeleteMemberRecords(
+  memberIds: number[]
+): Promise<boolean> {
+  if (memberIds.length === 0) return true
+
+  const { error } = await supabase
+    .from("workspace_members")
+    .delete()
+    .in("id", memberIds)
+    .not("revoked_at", "is", null)
+
+  if (error) {
+    throw new Error(`Failed to batch delete members: ${error.message}`)
+  }
+
+  return true
+}
+

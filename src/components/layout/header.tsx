@@ -1,9 +1,18 @@
 import type { ComponentProps } from "react"
 import { useLocation } from "wouter"
-import { Bot, ChevronDown, Search, UserPlus } from "lucide-react"
+import {
+  Bot,
+  ChevronDown,
+  Monitor,
+  Moon,
+  Search,
+  Sun,
+  UserPlus,
+} from "lucide-react"
 import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { useWorkspaceStore, useActiveWorkspace } from "@/stores/workspace-store"
+import { useTheme } from "@/components/theme-provider"
 
 export interface HeaderProps extends ComponentProps<"header"> {
   /** Optional custom workspace name override */
@@ -36,6 +45,7 @@ export function Header({
 }: HeaderProps) {
   const [, setLocation] = useLocation()
   const activeWorkspace = useActiveWorkspace()
+  const { theme, setTheme } = useTheme()
   const hasWorkspaces = useWorkspaceStore(
     (state) => state.workspaces.length > 0
   )
@@ -55,6 +65,16 @@ export function Header({
     }
   }
 
+  const handleCycleTheme = () => {
+    if (theme === "system") {
+      setTheme("dark")
+    } else if (theme === "dark") {
+      setTheme("light")
+    } else {
+      setTheme("system")
+    }
+  }
+
   return (
     <header
       className={cn(
@@ -65,7 +85,7 @@ export function Header({
     >
       {children ?? (
         <>
-          {/* Left: Workspace */}
+          {/* Left: Workspace & Join Workspace */}
           <div className="flex min-w-0 items-center gap-1">
             <span className="shrink-0 font-medium text-muted-foreground/80">
               Workspace:
@@ -88,28 +108,45 @@ export function Header({
                 {resolvedWorkspaceName}
               </span>
             )}
-          </div>
-
-          {/* Middle: Brand Title (Optically centered) */}
-          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight text-foreground/90">
-            Kaizen
-          </div>
-
-          {/* Right: Join Workspace, Search & Assistant buttons */}
-          <div className="flex shrink-0 items-center justify-end gap-1">
             {onJoinClick && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-xs"
                 onClick={onJoinClick}
-                className="cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="shrink-0 cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Join Workspace with Code"
                 aria-label="Join Workspace with Code"
               >
                 <UserPlus className="size-3.5" />
               </Button>
             )}
+          </div>
+
+          {/* Right: Search & Assistant buttons */}
+          <div className="flex shrink-0 items-center justify-start gap-1">
+            {/* Middle: Brand Title (Optically centered) */}
+            <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-semibold tracking-tight text-foreground/90">
+              Kaizen
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={handleCycleTheme}
+              className="cursor-pointer text-muted-foreground hover:bg-accent hover:text-foreground"
+              title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (click to cycle)`}
+              aria-label={`Toggle theme (currently ${theme})`}
+            >
+              {theme === "dark" ? (
+                <Moon className="size-3.5" />
+              ) : theme === "light" ? (
+                <Sun className="size-3.5" />
+              ) : (
+                <Monitor className="size-3.5" />
+              )}
+            </Button>
 
             <Button
               type="button"

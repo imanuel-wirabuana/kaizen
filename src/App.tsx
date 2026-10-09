@@ -10,7 +10,6 @@ import { CalendarPage } from "@/pages/calendar"
 import { AssistantPage } from "@/pages/assistant"
 import { SettingsPage } from "@/pages/settings"
 import { MembersPage } from "@/pages/members"
-import { MemberPermissionsPage } from "@/pages/member-permissions"
 import { AboutPage } from "@/pages/about"
 import { LandingPage } from "@/pages/landing"
 import { NotFound } from "@/components/not-found"
@@ -86,7 +85,8 @@ export function App() {
 
               {/* members */}
               <Route path="/members" component={MembersPage} />
-              <Route path="/members/:id" component={MemberPermissionsPage} />
+              <Route path="/members/invite/:id" component={MembersPage} />
+              <Route path="/members/:id" component={MembersPage} />
 
               {/* about */}
               <Route path="/about" component={AboutPage} />
