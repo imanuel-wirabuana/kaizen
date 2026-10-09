@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { InboxEmptyState } from "@/features/inbox/components/inbox-empty-state"
 import { useBatchSelectedIds, useZenStore } from "@/stores/zen-store"
-import { useActiveWorkspace } from "@/stores/workspace-store"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import type { Zen } from "@/types/zen"
 import { cn } from "cn"
 import { formatDistanceToNow } from "date-fns"
@@ -26,12 +26,7 @@ export function InboxItemList({
   onSelectZen,
 }: InboxItemListProps) {
   const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
+  const workspaceProfiles = useWorkspaceMemberProfiles()
   const selectedBatchIds = useBatchSelectedIds()
   const toggleBatchSelect = useZenStore((state) => state.toggleBatchSelect)
   const isBatchMode = selectedBatchIds.length > 0

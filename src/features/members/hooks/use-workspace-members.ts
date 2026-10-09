@@ -15,7 +15,6 @@ import {
   batchDeleteMemberRecords,
   subscribeToMemberChanges,
   syncWorkspaceUserProfile,
-  type UserProfileData,
 } from "@/features/members/services/member-service"
 import { memberKeys } from "@/features/members/services/member-keys"
 import {
@@ -23,6 +22,7 @@ import {
   type WorkspaceMember,
   type WorkspaceMemberProfile,
   type WorkspacePermissions,
+  type MemberProfileData,
 } from "@/types/member"
 
 export function useWorkspaceMembers() {
@@ -43,14 +43,18 @@ export function useWorkspaceMembers() {
     staleTime: 1000 * 60 * 5,
   })
 
-  // Auto-sync current user's profile to workspace settings in background
+  // Silent background sync of current user's Clerk profile to workspace_members.profile
   useEffect(() => {
     if (!workspaceId || !user) return
     const isOwner = Boolean(
       activeWorkspace && activeWorkspace.owner_id === user.id
     )
     void syncWorkspaceUserProfile({ workspaceId, user, isOwner })
-  }, [workspaceId, user, activeWorkspace])
+  }, [
+    workspaceId,
+    user,
+    activeWorkspace,
+  ])
 
   // 2. Realtime Subscription: Update React Query Cache directly
   useEffect(() => {
@@ -276,17 +280,21 @@ export function useWorkspaceMembers() {
     },
   })
 
-  // Format owner + collaborators (memoized for referential stability)
+  // Format owner + collaborators using workspace_members.profile & Clerk (memoized for referential stability)
   const membersWithProfiles: WorkspaceMemberProfile[] = useMemo(() => {
     const list: WorkspaceMemberProfile[] = []
 
-    // Add Owner entry
-    if (activeWorkspace) {
+    // Check if owner is already present in rawMembers
+    const ownerMemberInRaw = rawMembers.find(
+      (m) => activeWorkspace && m.user_id === activeWorkspace.owner_id
+    )
+
+    // Add synthesized Owner entry if owner row is not yet in rawMembers
+    if (activeWorkspace && !ownerMemberInRaw) {
       const isCurrentUserOwner = Boolean(
         user && activeWorkspace.owner_id === user.id
       )
 
-      // Owner is determined by activeWorkspace.owner_id; Clerk is the single source of truth
       const ownerName = isCurrentUserOwner
         ? user?.fullName ||
           [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
@@ -322,26 +330,25 @@ export function useWorkspaceMembers() {
       })
     }
 
-    // Add Member rows
+    // Add members from rawMembers, populating profile directly from m.profile
     for (const m of rawMembers) {
+      const isOwner = Boolean(activeWorkspace && m.user_id === activeWorkspace.owner_id)
       const isCurrentUser = Boolean(user && m.user_id === user.id)
-      const settings = (activeWorkspace?.settings as Record<string, unknown>) || {}
-      const profiles =
-        (settings.profiles as Record<string, UserProfileData>) || {}
-      const perms = (m.permissions as unknown as Record<string, unknown>) || {}
-      const memberStoredProfile =
-        (perms._profile as UserProfileData | undefined) || profiles[m.user_id]
+      const memberStoredProfile = m.profile as MemberProfileData | undefined
 
       const displayName = isCurrentUser
         ? user?.fullName ||
           [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
           user?.username ||
-          "You"
-        : memberStoredProfile?.displayName || `User ${m.user_id.slice(-6)}`
+          (isOwner ? "You (Workspace Owner)" : "You")
+        : memberStoredProfile?.displayName ||
+          (isOwner ? "Workspace Owner" : `User ${m.user_id.slice(-6)}`)
 
       const email = isCurrentUser
-        ? user?.primaryEmailAddress?.emailAddress || "collaborator@kaizen.app"
-        : memberStoredProfile?.email || `user-${m.user_id.slice(-6)}@kaizen.app`
+        ? user?.primaryEmailAddress?.emailAddress ||
+          (isOwner ? "owner@kaizen.app" : "collaborator@kaizen.app")
+        : memberStoredProfile?.email ||
+          (isOwner ? "owner@kaizen.app" : `user-${m.user_id.slice(-6)}@kaizen.app`)
 
       const avatarUrl = isCurrentUser
         ? user?.imageUrl
@@ -357,18 +364,20 @@ export function useWorkspaceMembers() {
       const initials =
         isCurrentUser && user?.firstName
           ? `${user.firstName[0]}${user.lastName ? user.lastName[0] : ""}`.toUpperCase()
-          : computedMemberInitials || m.user_id.slice(-2).toUpperCase()
+          : memberStoredProfile?.initials ||
+            computedMemberInitials ||
+            m.user_id.slice(-2).toUpperCase()
 
       list.push({
-        id: m.id,
+        id: isOwner ? -1 : m.id,
         workspaceId: m.workspace_id,
         userId: m.user_id,
         displayName,
         email,
         avatarUrl,
         initials,
-        role: "Member",
-        permissions: m.permissions,
+        role: isOwner ? "Owner" : "Member",
+        permissions: isOwner ? OWNER_PERMISSIONS : m.permissions,
         createdAt: m.created_at,
         updatedAt: m.updated_at,
         revokedAt: m.revoked_at,
@@ -378,6 +387,20 @@ export function useWorkspaceMembers() {
 
     return list
   }, [activeWorkspace, user, rawMembers])
+
+  // Map of userId -> profile for external consumer components
+  const memberProfilesMap = useMemo<Record<string, MemberProfileData>>(() => {
+    const map: Record<string, MemberProfileData> = {}
+    for (const m of membersWithProfiles) {
+      map[m.userId] = {
+        displayName: m.displayName,
+        email: m.email,
+        avatarUrl: m.avatarUrl,
+        initials: m.initials,
+      }
+    }
+    return map
+  }, [membersWithProfiles])
 
   return {
     members: membersWithProfiles,
@@ -408,5 +431,15 @@ export function useWorkspaceMembers() {
       batchRestoreMutation.isPending ||
       batchDeleteMutation.isPending,
     refreshMembers,
+    memberProfiles: memberProfilesMap,
   }
+}
+
+/**
+ * Lightweight hook to get resolved member profiles for the active workspace.
+ * Backed by TanStack React Query cache (0ms lookup).
+ */
+export function useWorkspaceMemberProfiles(): Record<string, MemberProfileData> {
+  const { memberProfiles } = useWorkspaceMembers()
+  return memberProfiles
 }

@@ -1,5 +1,12 @@
 import { supabase } from "@/services/supabase/client"
-import type { WorkspaceMember, WorkspacePermissions } from "@/types/member"
+import type {
+  WorkspaceMember,
+  WorkspacePermissions,
+  MemberProfileData,
+} from "@/types/member"
+import { OWNER_PERMISSIONS } from "@/types/member"
+import { queryClient } from "@/lib/query-client"
+import { memberKeys } from "@/features/members/services/member-keys"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
 export interface MemberRealtimeHandlers {
@@ -178,15 +185,17 @@ export function subscribeToMemberChanges(
 }
 
 export interface UserProfileData {
-  userId: string
+  userId?: string
   displayName: string
   email: string
   avatarUrl?: string
+  initials?: string
+  lastSeenAt?: string
 }
 
 /**
- * Synchronize user profile (name, email, avatar) to workspace settings and member records.
- * This allows all collaborators and owners to see real names and avatars across the workspace.
+ * Silently synchronize user profile (name, email, avatar) to workspace_members.profile.
+ * Ensures the member and owner profiles are always fresh and up-to-date with Clerk.
  */
 export async function syncWorkspaceUserProfile({
   workspaceId,
@@ -215,113 +224,108 @@ export async function syncWorkspaceUserProfile({
   const email = user.primaryEmailAddress?.emailAddress || ""
   const avatarUrl = user.imageUrl || undefined
 
-  const userProfile: UserProfileData = {
-    userId: user.id,
+  const computedInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("")
+
+  const memberProfile: MemberProfileData = {
     displayName,
     email,
     avatarUrl,
+    initials: computedInitials || user.id.slice(-2).toUpperCase(),
+    lastSeenAt: new Date().toISOString(),
   }
 
   try {
-    // 1. Fetch current workspace settings
+    // 1. Fetch current membership record
+    const { data: memberRow, error: fetchMemberError } = await supabase
+      .from("workspace_members")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (fetchMemberError) {
+      console.warn("Could not query workspace_members for profile sync:", fetchMemberError)
+      return
+    }
+
+    if (memberRow) {
+      const existing = (memberRow.profile as MemberProfileData | undefined) || {}
+      const isProfileDifferent =
+        existing.displayName !== memberProfile.displayName ||
+        existing.email !== memberProfile.email ||
+        existing.avatarUrl !== memberProfile.avatarUrl
+
+      if (isProfileDifferent) {
+        const { data: updatedMember, error: updateError } = await supabase
+          .from("workspace_members")
+          .update({
+            profile: memberProfile,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", memberRow.id)
+          .select()
+          .single()
+
+        if (!updateError && updatedMember) {
+          queryClient.setQueryData<WorkspaceMember[]>(
+            memberKeys.list(workspaceId),
+            (old) =>
+              old?.map((m) =>
+                m.id === updatedMember.id ? (updatedMember as WorkspaceMember) : m
+              ) ?? [updatedMember as WorkspaceMember]
+          )
+        }
+      }
+    } else if (isOwner) {
+      // If user is workspace owner and doesn't have a membership row yet, insert one
+      const { data: newOwnerMember, error: insertError } = await supabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: workspaceId,
+          user_id: user.id,
+          permissions: OWNER_PERMISSIONS,
+          profile: memberProfile,
+        })
+        .select()
+        .single()
+
+      if (!insertError && newOwnerMember) {
+        queryClient.setQueryData<WorkspaceMember[]>(
+          memberKeys.list(workspaceId),
+          (old) =>
+            old
+              ? [...old.filter((m) => m.id !== newOwnerMember.id), newOwnerMember as WorkspaceMember]
+              : [newOwnerMember as WorkspaceMember]
+        )
+      }
+    }
+
+    // 2. Proactively clean legacy profiles/owner_profile from workspace.settings if present
     const { data: wsData } = await supabase
       .from("workspaces")
-      .select("settings, owner_id")
+      .select("settings")
       .eq("id", workspaceId)
       .maybeSingle()
 
-    if (wsData) {
-      const currentSettings = (wsData.settings as Record<string, unknown>) || {}
-      let hasLegacyOwnerInfo = false
-      const cleanSettings = { ...currentSettings }
-
-      // Proactively clean up any legacy owner_profile from workspace.settings
-      if ("owner_profile" in cleanSettings) {
+    if (wsData?.settings && typeof wsData.settings === "object") {
+      const s = wsData.settings as Record<string, unknown>
+      if ("owner_profile" in s || "profiles" in s) {
+        const cleanSettings = { ...s }
         delete cleanSettings.owner_profile
-        hasLegacyOwnerInfo = true
-      }
-
-      // Also remove owner entry from settings.profiles if present
-      if (cleanSettings.profiles && typeof cleanSettings.profiles === "object") {
-        const profilesObj = { ...(cleanSettings.profiles as Record<string, UserProfileData>) }
-        if (wsData.owner_id in profilesObj) {
-          delete profilesObj[wsData.owner_id]
-          cleanSettings.profiles = profilesObj
-          hasLegacyOwnerInfo = true
-        }
-      }
-
-      const isUserTheOwner = isOwner || wsData.owner_id === user.id
-
-      if (!isUserTheOwner) {
-        const existingProfiles =
-          (cleanSettings.profiles as Record<string, UserProfileData>) || {}
-        const existingProfile = existingProfiles[user.id]
-
-        const needsProfileUpdate =
-          !existingProfile ||
-          existingProfile.displayName !== displayName ||
-          existingProfile.email !== email ||
-          existingProfile.avatarUrl !== avatarUrl
-
-        if (needsProfileUpdate || hasLegacyOwnerInfo) {
-          await supabase
-            .from("workspaces")
-            .update({
-              settings: {
-                ...cleanSettings,
-                profiles: {
-                  ...existingProfiles,
-                  [user.id]: userProfile,
-                },
-              },
-            })
-            .eq("id", workspaceId)
-        }
-      } else if (hasLegacyOwnerInfo) {
-        // Persist clean settings without owner data
+        delete cleanSettings.profiles
         await supabase
           .from("workspaces")
           .update({ settings: cleanSettings })
           .eq("id", workspaceId)
       }
     }
-
-    // 2. If member, also sync into workspace_members.permissions._profile
-    if (!isOwner) {
-      const { data: memberRow } = await supabase
-        .from("workspace_members")
-        .select("id, permissions")
-        .eq("workspace_id", workspaceId)
-        .eq("user_id", user.id)
-        .is("revoked_at", null)
-        .maybeSingle()
-
-      if (memberRow) {
-        const currentPerms = (memberRow.permissions as Record<string, unknown>) || {}
-        const currentStoredProfile = currentPerms._profile as
-          | UserProfileData
-          | undefined
-        if (
-          !currentStoredProfile ||
-          currentStoredProfile.displayName !== displayName ||
-          currentStoredProfile.email !== email ||
-          currentStoredProfile.avatarUrl !== avatarUrl
-        ) {
-          await supabase
-            .from("workspace_members")
-            .update({
-              permissions: {
-                ...currentPerms,
-                _profile: userProfile,
-              },
-            })
-            .eq("id", memberRow.id)
-        }
-      }
-    }
   } catch (err) {
-    console.warn("Could not sync user profile to workspace:", err)
+    console.warn("Silent background profile sync error:", err)
   }
 }
 

@@ -1,6 +1,7 @@
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { AssistantEmptyState } from "@/features/assistant/components/assistant-empty-state"
 import { AssistantItemRow } from "@/features/assistant/components/assistant-item-row"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import {
   useAssistantStore,
   useAssistantBatchSelectedIds,
@@ -27,6 +28,7 @@ export function AssistantItemList({
   const selectedBatchIds = useAssistantBatchSelectedIds()
   const toggleBatchSelect = useAssistantStore((state) => state.toggleBatchSelect)
   const isBatchMode = selectedBatchIds.length > 0
+  const memberProfiles = useWorkspaceMemberProfiles()
 
   if (isLoading) {
     return (
@@ -61,6 +63,7 @@ export function AssistantItemList({
               isSelected={isSelected}
               isBatchSelected={isBatchSelected}
               isBatchMode={isBatchMode}
+              profiles={memberProfiles}
               onToggleBatch={toggleBatchSelect}
               onClick={onSelectThread}
             />

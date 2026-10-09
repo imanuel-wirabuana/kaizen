@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { useActiveWorkspace } from "@/stores/workspace-store"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { AiMessage } from "@/types/assistant"
@@ -40,11 +41,7 @@ export function AssistantChatMessages({
 }: AssistantChatMessagesProps) {
   const { user } = useUser()
   const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
+  const workspaceProfiles = useWorkspaceMemberProfiles()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [copiedId, setCopiedId] = useState<number | string | null>(null)

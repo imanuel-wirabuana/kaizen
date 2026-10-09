@@ -1,6 +1,7 @@
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { BoardEmptyState } from "@/features/boards/components/board-empty-state"
 import { BoardItemRow } from "@/features/boards/components/board-item-row"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import {
   useBoardStore,
   useBoardBatchSelectedIds,
@@ -27,6 +28,7 @@ export function BoardItemList({
   const selectedBatchIds = useBoardBatchSelectedIds()
   const toggleBatchSelect = useBoardStore((state) => state.toggleBatchSelect)
   const isBatchMode = selectedBatchIds.length > 0
+  const memberProfiles = useWorkspaceMemberProfiles()
 
   if (isLoading) {
     return (
@@ -61,6 +63,7 @@ export function BoardItemList({
               isSelected={isSelected}
               isBatchSelected={isBatchSelected}
               isBatchMode={isBatchMode}
+              profiles={memberProfiles}
               onToggleBatch={toggleBatchSelect}
               onClick={onSelectBoard}
             />

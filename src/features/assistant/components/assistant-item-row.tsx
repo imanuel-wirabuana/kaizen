@@ -1,16 +1,17 @@
 import { useUser } from "@clerk/clerk-react"
-import { useActiveWorkspace } from "@/stores/workspace-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { AiThread } from "@/types/assistant"
+import type { MemberProfileData } from "@/types/member"
 
 export interface AssistantItemRowProps {
   thread: AiThread
   isSelected: boolean
   isBatchSelected: boolean
   isBatchMode: boolean
+  profiles?: Record<string, MemberProfileData>
   onToggleBatch: (id: number) => void
   onClick: (id: number) => void
 }
@@ -20,16 +21,11 @@ export function AssistantItemRow({
   isSelected,
   isBatchSelected,
   isBatchMode,
+  profiles,
   onToggleBatch,
   onClick,
 }: AssistantItemRowProps) {
   const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
 
   const formattedDate = (() => {
     try {
@@ -43,9 +39,7 @@ export function AssistantItemRow({
   })()
 
   const isCurrentUser = Boolean(user && thread.owner_id === user.id)
-  const creatorProfile = thread.owner_id
-    ? workspaceProfiles[thread.owner_id]
-    : undefined
+  const creatorProfile = thread.owner_id && profiles ? profiles[thread.owner_id] : undefined
 
   const ownerName = isCurrentUser
     ? "You"

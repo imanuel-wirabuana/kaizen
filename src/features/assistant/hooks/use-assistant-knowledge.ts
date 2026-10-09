@@ -88,16 +88,28 @@ export function useAssistantKnowledge(options?: UseAssistantKnowledgeOptions) {
     }
   }, [user, activeWorkspace])
 
-  // Member profiles from workspace settings
-  const memberProfiles = useMemo(() => {
-    const settings = activeWorkspace?.settings as Record<string, unknown> | undefined
-    return (
-      (settings?.profiles as Record<
-        string,
-        { displayName?: string; email?: string }
-      >) || undefined
-    )
-  }, [activeWorkspace?.settings])
+  // Member profiles resolved from workspace_members.profile
+  const memberProfiles = useMemo<
+    Record<string, { displayName?: string; email?: string }> | undefined
+  >(() => {
+    if (!members.length && !currentUser) return undefined
+    const map: Record<string, { displayName?: string; email?: string }> = {}
+    for (const m of members) {
+      if (m.profile) {
+        map[m.user_id] = {
+          displayName: m.profile.displayName,
+          email: m.profile.email,
+        }
+      }
+    }
+    if (currentUser) {
+      map[currentUser.id] = {
+        displayName: currentUser.name,
+        email: currentUser.email,
+      }
+    }
+    return map
+  }, [members, currentUser])
 
   // Assemble full knowledge context
   const knowledgeContext = useMemo<AssistantKnowledgeContext>(

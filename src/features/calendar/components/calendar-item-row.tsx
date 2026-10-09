@@ -1,16 +1,17 @@
 import { useUser } from "@clerk/clerk-react"
-import { useActiveWorkspace } from "@/stores/workspace-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { Calendar } from "@/types/calendar"
+import type { MemberProfileData } from "@/types/member"
 
 interface CalendarItemRowProps {
   calendar: Calendar
   isSelected: boolean
   isBatchSelected: boolean
   isBatchMode: boolean
+  profiles?: Record<string, MemberProfileData>
   onToggleBatch: (id: number) => void
   onClick: (id: number) => void
 }
@@ -20,16 +21,11 @@ export function CalendarItemRow({
   isSelected,
   isBatchSelected,
   isBatchMode,
+  profiles,
   onToggleBatch,
   onClick,
 }: CalendarItemRowProps) {
   const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
 
   const formattedDate = (() => {
     try {
@@ -42,9 +38,7 @@ export function CalendarItemRow({
   })()
 
   const isCurrentUser = Boolean(user && calendar.owner_id === user.id)
-  const creatorProfile = calendar.owner_id
-    ? workspaceProfiles[calendar.owner_id]
-    : undefined
+  const creatorProfile = calendar.owner_id && profiles ? profiles[calendar.owner_id] : undefined
 
   const ownerName = isCurrentUser
     ? "You"

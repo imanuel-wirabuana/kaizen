@@ -1,16 +1,17 @@
 import { useUser } from "@clerk/clerk-react"
-import { useActiveWorkspace } from "@/stores/workspace-store"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { Board } from "@/types/board"
+import type { MemberProfileData } from "@/types/member"
 
 interface BoardItemRowProps {
   board: Board
   isSelected: boolean
   isBatchSelected: boolean
   isBatchMode: boolean
+  profiles?: Record<string, MemberProfileData>
   onToggleBatch: (id: number) => void
   onClick: (id: number) => void
 }
@@ -20,16 +21,11 @@ export function BoardItemRow({
   isSelected,
   isBatchSelected,
   isBatchMode,
+  profiles,
   onToggleBatch,
   onClick,
 }: BoardItemRowProps) {
   const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
 
   const formattedDate = (() => {
     try {
@@ -42,9 +38,7 @@ export function BoardItemRow({
   })()
 
   const isCurrentUser = Boolean(user && board.owner_id === user.id)
-  const creatorProfile = board.owner_id
-    ? workspaceProfiles[board.owner_id]
-    : undefined
+  const creatorProfile = board.owner_id && profiles ? profiles[board.owner_id] : undefined
 
   const ownerName = isCurrentUser
     ? "You"

@@ -44,11 +44,20 @@ export const OWNER_PERMISSIONS: WorkspacePermissions = {
   members: { read: true, create: true, update: true, delete: true },
 }
 
+export interface MemberProfileData {
+  displayName?: string
+  email?: string
+  avatarUrl?: string
+  initials?: string
+  lastSeenAt?: string
+}
+
 export interface WorkspaceMember {
   id: number
   workspace_id: number
   user_id: string
   permissions: WorkspacePermissions
+  profile?: MemberProfileData
   created_at: string
   updated_at: string | null
   revoked_at: string | null

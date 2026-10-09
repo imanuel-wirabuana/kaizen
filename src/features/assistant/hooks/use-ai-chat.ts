@@ -237,11 +237,7 @@ export function useAiChat({
         }
 
         // 4. Prepare History for AI Streaming (Multi-user context attribution)
-        const workspaceProfiles =
-          (activeWorkspace?.settings?.profiles as Record<
-            string,
-            { displayName?: string; email?: string; avatarUrl?: string }
-          >) || {}
+        const workspaceProfiles = knowledgeContext.memberProfiles || {}
 
         const userOwnerIds = new Set(
           existingMessages
@@ -362,10 +358,10 @@ export function useAiChat({
       shouldAutoUpdateTitle,
       effectiveModel,
       workspaceId,
-      activeWorkspace,
       upsertThread,
       dynamicSystemPrompt,
       systemPromptOverride,
+      knowledgeContext.memberProfiles,
     ]
   )
 

@@ -23,17 +23,12 @@ export interface ValidatedImportResult {
 }
 
 function sanitizeSettingsWithoutOwner(
-  settings: Record<string, unknown>,
-  ownerId?: string
+  settings: Record<string, unknown>
 ): Record<string, unknown> {
   const clean = { ...settings }
   delete clean.owner_profile
   delete clean.owner_info
-  if (ownerId && clean.profiles && typeof clean.profiles === "object") {
-    const profiles = { ...(clean.profiles as Record<string, unknown>) }
-    delete profiles[ownerId]
-    clean.profiles = profiles
-  }
+  delete clean.profiles
   return clean
 }
 
@@ -43,8 +38,7 @@ function sanitizeSettingsWithoutOwner(
 export function exportWorkspaceSettings(workspace: Workspace): void {
   try {
     const cleanSettings = sanitizeSettingsWithoutOwner(
-      (workspace.settings as Record<string, unknown>) || {},
-      workspace.owner_id
+      (workspace.settings as Record<string, unknown>) || {}
     )
 
     const payload: ExportedSettingsPayload = {

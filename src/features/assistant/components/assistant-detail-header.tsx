@@ -3,7 +3,7 @@ import { useUser } from "@clerk/clerk-react"
 import { Archive, ArchiveRestore, Eraser, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { useActiveWorkspace } from "@/stores/workspace-store"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
@@ -37,12 +37,7 @@ export function AssistantDetailHeader({
   className,
 }: AssistantDetailHeaderProps) {
   const { user } = useUser()
-  const activeWorkspace = useActiveWorkspace()
-  const workspaceProfiles =
-    (activeWorkspace?.settings?.profiles as Record<
-      string,
-      { displayName?: string; email?: string; avatarUrl?: string }
-    >) || {}
+  const workspaceProfiles = useWorkspaceMemberProfiles()
 
   const isArchived = Boolean(thread?.archived_at)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)

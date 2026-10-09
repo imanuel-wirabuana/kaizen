@@ -86,7 +86,7 @@ export function formatMembersKnowledge(
     }
 
     // If it's a raw WorkspaceMember
-    const profile = memberProfiles?.[m.user_id]
+    const profile = memberProfiles?.[m.user_id] || (m as WorkspaceMember).profile
     const name = profile?.displayName || `User ${m.user_id.slice(-6)}`
     const email = profile?.email || "No email"
     return `- **${name}** (Member) — ${email}`

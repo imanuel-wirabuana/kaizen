@@ -1,6 +1,7 @@
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar"
 import { CalendarEmptyState } from "@/features/calendar/components/calendar-empty-state"
 import { CalendarItemRow } from "@/features/calendar/components/calendar-item-row"
+import { useWorkspaceMemberProfiles } from "@/features/members/hooks/use-workspace-members"
 import {
   useCalendarStore,
   useCalendarBatchSelectedIds,
@@ -27,6 +28,7 @@ export function CalendarItemList({
   const selectedBatchIds = useCalendarBatchSelectedIds()
   const toggleBatchSelect = useCalendarStore((state) => state.toggleBatchSelect)
   const isBatchMode = selectedBatchIds.length > 0
+  const memberProfiles = useWorkspaceMemberProfiles()
 
   if (isLoading) {
     return (
@@ -61,6 +63,7 @@ export function CalendarItemList({
               isSelected={isSelected}
               isBatchSelected={isBatchSelected}
               isBatchMode={isBatchMode}
+              profiles={memberProfiles}
               onToggleBatch={toggleBatchSelect}
               onClick={onSelectCalendar}
             />
