@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Kanban, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BoardDetailHeader } from "@/features/boards/components/board-detail-header"
+import { BoardCanvas } from "@/features/boards/components/board-canvas"
 import type { Board } from "@/types/board"
 
 export interface BoardDetailProps {
@@ -24,6 +25,7 @@ export function BoardDetail({
   onBackToBoards,
 }: BoardDetailProps) {
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isAddingLane, setIsAddingLane] = useState(false)
 
   const handleToggleArchive = async () => {
     if (!board || isProcessing) return
@@ -61,10 +63,13 @@ export function BoardDetail({
             : undefined
         }
         onDelete={board && onDelete ? handleDelete : undefined}
+        onAddColumn={
+          board && !board.archived_at ? () => setIsAddingLane(true) : undefined
+        }
       />
 
-      {/* Main Detail Body (Scrollable) */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* Main Detail Body */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* If a board ID was specified in URL and is still loading */}
         {isLoading && selectedBoardId !== null ? (
           <div className="flex flex-1 flex-col items-center justify-center p-12 text-center text-muted-foreground">
@@ -105,35 +110,12 @@ export function BoardDetail({
             </p>
           </div>
         ) : (
-          /* Active Board Canvas: Empty Placeholder State */
-          <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col p-6 sm:p-8">
-            <div className="flex flex-col gap-1.5 pb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {board.name}
-              </h1>
-              {board.description?.trim() ? (
-                <p className="text-sm text-muted-foreground">
-                  {board.description}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground/60 italic">
-                  No description provided.
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border/80 bg-muted/20 p-12 text-center">
-              <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground">
-                <Kanban className="size-6" />
-              </div>
-              <p className="text-sm font-medium text-foreground">
-                This board is currently empty
-              </p>
-              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                Kanban columns and tasks will appear here.
-              </p>
-            </div>
-          </div>
+          /* Active Board Canvas */
+          <BoardCanvas
+            board={board}
+            isAddingLane={isAddingLane}
+            onIsAddingLaneChange={setIsAddingLane}
+          />
         )}
       </div>
     </div>
@@ -141,3 +123,4 @@ export function BoardDetail({
 }
 
 export default BoardDetail
+

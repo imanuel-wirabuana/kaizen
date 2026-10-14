@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   Select,
   SelectContent,
@@ -66,8 +67,16 @@ export function DangerZoneSettingsPanel({
 
   if (!workspace) {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-center text-xs text-muted-foreground">
-        No active workspace selected.
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
+        <div className="sticky top-0 z-20 flex min-h-11 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 p-1 px-3 backdrop-blur-xs">
+          <PageSidebarTrigger
+            className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
+            title="Toggle sidebar"
+          />
+        </div>
+        <div className="flex flex-1 items-center justify-center p-8 text-center text-xs text-muted-foreground">
+          No active workspace selected.
+        </div>
       </div>
     )
   }
@@ -137,22 +146,27 @@ export function DangerZoneSettingsPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
-      {/* Top Header Bar */}
-      <div className="sticky top-0 z-20 flex min-h-12 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 px-4 backdrop-blur-xs">
-        <div className="flex items-center gap-2">
+      {/* Top Action Bar */}
+      <div className="sticky top-0 z-20 flex min-h-11 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 p-1 px-3 backdrop-blur-xs">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <PageSidebarTrigger
             className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
             title="Toggle sidebar"
           />
-          <h2 className="text-sm font-semibold text-destructive flex items-center gap-1.5">
-            <AlertTriangle className="size-4" />
-            <span>Danger Zone</span>
-          </h2>
+          <Separator orientation="vertical" />
+          <AlertTriangle className="size-3.5 text-destructive" />
+          <span className="font-semibold text-xs text-destructive">Danger Zone</span>
+          <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
+            Destructive Operations
+          </span>
         </div>
 
         <div>
           {isOwner ? (
-            <Badge variant="outline" className="text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+            <Badge
+              variant="outline"
+              className="text-xs border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+            >
               Workspace Owner
             </Badge>
           ) : (
@@ -163,130 +177,148 @@ export function DangerZoneSettingsPanel({
         </div>
       </div>
 
-      {/* Main Body (Scrollable) */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          {!isOwner && (
-            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-400">
-              <ShieldAlert className="size-4.5 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Owner Permissions Required</p>
-                <p className="text-[11px] opacity-90 mt-0.5">
-                  Only the workspace owner can transfer ownership or permanently delete this workspace.
-                </p>
+      {/* Main Full-Width Body with Row-by-Row Layout */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="w-full p-4 sm:p-6 pb-16">
+          <div className="flex w-full flex-col gap-6">
+            {!isOwner && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-400">
+                <ShieldAlert className="size-4.5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Owner Permissions Required</p>
+                  <p className="text-[11px] opacity-90 mt-0.5">
+                    Only the workspace owner can transfer ownership or permanently delete this workspace.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Action 1: Archive Workspace */}
-          <Card className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs border-border/80">
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground mt-0.5">
-                <Archive className="size-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Archive Workspace</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 max-w-lg">
-                  Soft-deletes this workspace. It will be hidden from the active list and can be restored later.
-                </p>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsArchiveOpen(true)}
-              className="cursor-pointer text-xs shrink-0 self-start sm:self-center"
-            >
-              Archive
-            </Button>
-          </Card>
-
-          {/* Action 2: Transfer Ownership */}
-          <Card className="p-5 flex flex-col gap-4 shadow-2xs border-border/80">
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 mt-0.5">
-                <UserCheck className="size-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Transfer Ownership</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 max-w-lg">
-                  Transfer full administrative ownership of this workspace to another team member. You will remain in the workspace as a standard collaborator.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 border-t border-border/40">
-              <div className="flex-1">
-                <Select
-                  value={selectedNewOwnerId}
-                  onValueChange={(val) => {
-                    if (val) setSelectedNewOwnerId(val)
-                  }}
-                  disabled={!isOwner || isMembersLoading || eligibleCandidates.length === 0}
-                >
-                  <SelectTrigger className="w-full text-xs bg-background">
-                    <SelectValue
-                      placeholder={
-                        isMembersLoading
-                          ? "Loading members..."
-                          : eligibleCandidates.length === 0
-                            ? "No other active members available"
-                            : "Select member to transfer to"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {eligibleCandidates.map((m) => (
-                      <SelectItem key={m.userId} value={m.userId}>
-                        {m.displayName} ({m.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Danger Zone Actions Card */}
+            <Card className="p-5 flex flex-col gap-0 shadow-2xs border-destructive/30 bg-destructive/2">
+              <div className="flex items-center justify-between border-b border-border/50 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-md bg-destructive/10 text-destructive">
+                    <AlertTriangle className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-destructive">Destructive Operations</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Actions that affect workspace accessibility, administrative authority, or data persistence.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsTransferOpen(true)}
-                disabled={!isOwner || !selectedNewOwnerId}
-                className="cursor-pointer text-xs shrink-0"
-              >
-                Transfer Ownership
-              </Button>
-            </div>
-          </Card>
-
-          {/* Action 3: Permanently Delete Workspace */}
-          <Card className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs border-destructive/40 bg-destructive/5">
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive mt-0.5">
-                <Trash2 className="size-4" />
+              {/* Row 1: Archive Workspace */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5 border-b border-border/40">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <div className="flex items-center gap-1.5">
+                    <Archive className="size-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Archive Workspace
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Soft-deletes this workspace. It will be hidden from the active list and can be restored later.
+                  </p>
+                </div>
+                <div className="w-full sm:max-w-md shrink-0 flex items-center justify-start sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsArchiveOpen(true)}
+                    className="cursor-pointer text-xs h-8"
+                  >
+                    Archive Workspace
+                  </Button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-destructive">
-                  Delete Workspace Permanently
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5 max-w-lg">
-                  Irreversibly delete this workspace, including all kanban boards, calendars, zenbox items, and AI chat threads.
-                </p>
-              </div>
-            </div>
 
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => setIsDeleteOpen(true)}
-              disabled={!isOwner}
-              className="cursor-pointer text-xs shrink-0 self-start sm:self-center"
-            >
-              Delete Workspace
-            </Button>
-          </Card>
+              {/* Row 2: Transfer Ownership */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5 border-b border-border/40">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <div className="flex items-center gap-1.5">
+                    <UserCheck className="size-3.5 text-amber-500" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Transfer Ownership
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Transfer primary administrative ownership to another active team collaborator.
+                  </p>
+                </div>
+                <div className="w-full sm:max-w-md shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={selectedNewOwnerId}
+                      onValueChange={(val) => {
+                        if (val) setSelectedNewOwnerId(val)
+                      }}
+                      disabled={!isOwner || isMembersLoading || eligibleCandidates.length === 0}
+                    >
+                      <SelectTrigger className="w-full text-xs bg-background h-8">
+                        <SelectValue
+                          placeholder={
+                            isMembersLoading
+                              ? "Loading members..."
+                              : eligibleCandidates.length === 0
+                                ? "No other members"
+                                : "Select new owner"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eligibleCandidates.map((m) => (
+                          <SelectItem key={m.userId} value={m.userId}>
+                            {m.displayName} ({m.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsTransferOpen(true)}
+                    disabled={!isOwner || !selectedNewOwnerId}
+                    className="cursor-pointer text-xs h-8 shrink-0"
+                  >
+                    Transfer
+                  </Button>
+                </div>
+              </div>
+
+              {/* Row 3: Permanently Delete Workspace */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <div className="flex items-center gap-1.5">
+                    <Trash2 className="size-3.5 text-destructive" />
+                    <span className="text-xs font-semibold text-destructive">
+                      Permanently Delete Workspace
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Irreversibly delete this workspace, including all kanban boards, calendars, tasks, and notes.
+                  </p>
+                </div>
+                <div className="w-full sm:max-w-md shrink-0 flex items-center justify-start sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setIsDeleteOpen(true)}
+                    disabled={!isOwner}
+                    className="cursor-pointer text-xs h-8"
+                  >
+                    Delete Workspace Permanently
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
 
@@ -399,3 +431,5 @@ export function DangerZoneSettingsPanel({
     </div>
   )
 }
+
+export default DangerZoneSettingsPanel

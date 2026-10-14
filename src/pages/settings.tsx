@@ -1,5 +1,12 @@
 import { useState } from "react"
 import { useRoute, useLocation } from "wouter"
+import {
+  Inbox,
+  Kanban,
+  Calendar,
+  Sparkles,
+  Users,
+} from "lucide-react"
 import { PageSidebarLayout } from "@/components/layout/page-sidebar-layout"
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces"
 import { useWorkspacePermissions } from "@/features/members/hooks/use-workspace-permissions"
@@ -10,11 +17,25 @@ import {
 } from "@/features/settings/components/settings-sidebar"
 import { GeneralSettingsPanel } from "@/features/settings/components/general-settings-panel"
 import { AppearanceSettingsPanel } from "@/features/settings/components/appearance-settings-panel"
+import { ShortcutsSettingsPanel } from "@/features/settings/components/shortcuts-settings-panel"
+import { FeaturePlaceholderSettingsPanel } from "@/features/settings/components/feature-placeholder-settings-panel"
 import { DangerZoneSettingsPanel } from "@/features/settings/components/danger-zone-settings-panel"
 import { ImportSettingsDialog } from "@/features/settings/components/import-settings-dialog"
 import { exportWorkspaceSettings } from "@/features/settings/services/settings-import-export"
 import { toast } from "@/components/ui/toast"
 import type { Workspace } from "@/types/workspace"
+
+const VALID_SECTIONS: SettingsSection[] = [
+  "general",
+  "appearance",
+  "shortcuts",
+  "zenbox",
+  "boards",
+  "calendars",
+  "assistant",
+  "members",
+  "danger",
+]
 
 export function SettingsPage() {
   const [, setLocation] = useLocation()
@@ -33,8 +54,9 @@ export function SettingsPage() {
 
   // Determine active section from URL or default to "general"
   const rawSection = matchSection && sectionParams?.section ? sectionParams.section : "general"
-  const activeSection: SettingsSection =
-    rawSection === "appearance" || rawSection === "danger" ? rawSection : "general"
+  const activeSection: SettingsSection = VALID_SECTIONS.includes(rawSection as SettingsSection)
+    ? (rawSection as SettingsSection)
+    : "general"
 
   const handleSelectSection = (section: SettingsSection) => {
     setLocation(`/settings/${section}`)
@@ -133,7 +155,66 @@ export function SettingsPage() {
         />
       )}
 
-      {activeSection === "appearance" && <AppearanceSettingsPanel />}
+      {activeSection === "appearance" && (
+        <AppearanceSettingsPanel
+          workspace={activeWorkspace}
+          canUpdate={canUpdate("workspace")}
+          onUpdateWorkspace={updateWorkspace}
+        />
+      )}
+
+      {activeSection === "shortcuts" && (
+        <ShortcutsSettingsPanel
+          workspace={activeWorkspace}
+          canUpdate={canUpdate("workspace")}
+          onUpdateWorkspace={updateWorkspace}
+        />
+      )}
+
+      {activeSection === "zenbox" && (
+        <FeaturePlaceholderSettingsPanel
+          title="Zenbox"
+          subtitle="Tasks & Capture"
+          icon={Inbox}
+          description="There are currently no custom Zenbox settings configured for this workspace."
+        />
+      )}
+
+      {activeSection === "boards" && (
+        <FeaturePlaceholderSettingsPanel
+          title="Boards"
+          subtitle="Workflow & Kanban"
+          icon={Kanban}
+          description="There are currently no custom task board settings configured for this workspace."
+        />
+      )}
+
+      {activeSection === "calendars" && (
+        <FeaturePlaceholderSettingsPanel
+          title="Calendars"
+          subtitle="Schedule & Events"
+          icon={Calendar}
+          description="There are currently no custom calendar settings configured for this workspace."
+        />
+      )}
+
+      {activeSection === "assistant" && (
+        <FeaturePlaceholderSettingsPanel
+          title="Assistant"
+          subtitle="AI & Knowledge"
+          icon={Sparkles}
+          description="There are currently no custom AI assistant settings configured for this workspace."
+        />
+      )}
+
+      {activeSection === "members" && (
+        <FeaturePlaceholderSettingsPanel
+          title="Members"
+          subtitle="Access & Permissions"
+          icon={Users}
+          description="There are currently no custom member configuration settings for this workspace."
+        />
+      )}
 
       {activeSection === "danger" && (
         <DangerZoneSettingsPanel

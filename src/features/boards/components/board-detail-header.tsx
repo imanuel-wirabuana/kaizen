@@ -1,5 +1,12 @@
 import { useState } from "react"
-import { Archive, ArchiveRestore, Clock, Loader2, Trash2 } from "lucide-react"
+import {
+  Archive,
+  ArchiveRestore,
+  Clock,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -21,6 +28,7 @@ export interface BoardDetailHeaderProps {
   isProcessing?: boolean
   onToggleArchive?: () => Promise<void>
   onDelete?: () => Promise<void>
+  onAddColumn?: () => void
   className?: string
 }
 
@@ -29,6 +37,7 @@ export function BoardDetailHeader({
   isProcessing = false,
   onToggleArchive,
   onDelete,
+  onAddColumn,
   className,
 }: BoardDetailHeaderProps) {
   const isArchived = Boolean(board?.archived_at)
@@ -64,29 +73,58 @@ export function BoardDetailHeader({
           className
         )}
       >
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        {/* Left: Sidebar trigger, Board Title & Description */}
+        <div className="mr-3 flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
           <PageSidebarTrigger
-            className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
+            className="size-7 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
             title="Toggle sidebar"
           />
 
           {board && (
             <>
-              <Separator orientation="vertical" />
-              <Clock className="size-3.5" />
-              <span>Updated {formattedDate}</span>
-
-              {isArchived && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                  Archived
-                </span>
-              )}
+              <Separator orientation="vertical" className="h-8" />
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate text-xs font-semibold tracking-tight text-foreground sm:text-sm">
+                  {board.name}
+                </h1>
+                {board.description?.trim() && (
+                  <span
+                    className="hidden max-w-sm truncate text-xs text-muted-foreground/70 lg:inline"
+                    title={board.description}
+                  >
+                    · {board.description}
+                  </span>
+                )}
+                {isArchived && (
+                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                    Archived
+                  </span>
+                )}
+              </div>
+              <Separator orientation="vertical" className="h-8" />
+              <div className="hidden items-center gap-1.5 md:flex">
+                <Clock className="size-3.5" />
+                <span>Updated {formattedDate}</span>
+              </div>
             </>
           )}
         </div>
 
+        {/* Right: Actions (Add Column, Updated date, Archive, Delete) */}
         {board && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {!isArchived && onAddColumn && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddColumn}
+                className="h-8 cursor-pointer gap-1.5 text-xs font-medium"
+              >
+                <Plus className="size-3.5" />
+                <span>Add Column</span>
+              </Button>
+            )}
+
             {onToggleArchive && (
               <Button
                 variant="ghost"
@@ -131,32 +169,34 @@ export function BoardDetailHeader({
       {/* Confirmation Dialog for Permanent Deletion */}
       {board && isArchived && onDelete && (
         <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this board?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete "{board?.name}"? All
-              columns, tasks, and data inside this board will be permanently
-              removed. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              className="gap-2"
-            >
-              {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
-              <span>Delete Board</span>
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    )}
-  </>
-)
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this board?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently delete "{board?.name}"? All
+                columns, zens, and data inside this board will be permanently
+                removed. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="gap-2"
+              >
+                {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
+                <span>Delete Board</span>
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
+  )
 }
 
 export default BoardDetailHeader

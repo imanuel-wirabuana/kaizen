@@ -6,4 +6,9 @@ export const boardKeys = {
   details: () => [...boardKeys.all, "detail"] as const,
   detail: (id: number | null | undefined) =>
     [...boardKeys.details(), id ?? "none"] as const,
+  lanes: (boardId: number | null | undefined) =>
+    [...boardKeys.all, "lanes", boardId ?? "none"] as const,
+  tasks: (boardId: number | null | undefined) =>
+    [...boardKeys.all, "tasks", boardId ?? "none"] as const,
 }
+

@@ -1,164 +1,314 @@
-import { useUser } from "@clerk/clerk-react"
-import { Moon, Sun, Monitor, Check, Palette, Keyboard, User } from "lucide-react"
+import { useState, useEffect } from "react"
+import {
+  Moon,
+  Sun,
+  Monitor,
+  Check,
+  Palette,
+  Type,
+  LayoutTemplate,
+  Save,
+  Loader2,
+  Lock,
+} from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { PageSidebarTrigger } from "@/components/layout/page-sidebar-layout"
+import { toast } from "@/components/ui/toast"
+import { cn } from "@/lib/utils"
+import type { Workspace, WorkspaceSettings } from "@/types/workspace"
 
-export function AppearanceSettingsPanel() {
+export interface AppearanceSettingsPanelProps {
+  workspace?: Workspace | null
+  canUpdate?: boolean
+  onUpdateWorkspace?: (
+    id: number,
+    updates: Partial<Workspace>
+  ) => Promise<Workspace | void>
+}
+
+const FONT_SIZE_OPTIONS = [
+  { value: "compact", label: "Compact (13px)" },
+  { value: "normal", label: "Standard (14px)" },
+  { value: "large", label: "Large (15px)" },
+]
+
+const DENSITY_OPTIONS = [
+  { value: "comfortable", label: "Comfortable (Default)" },
+  { value: "compact", label: "Compact" },
+]
+
+export function AppearanceSettingsPanel({
+  workspace,
+  canUpdate = true,
+  onUpdateWorkspace,
+}: AppearanceSettingsPanelProps) {
   const { theme, setTheme } = useTheme()
-  const { user } = useUser()
+
+  const [fontSize, setFontSize] = useState<string>(
+    (workspace?.settings?.appearance?.font_size as string) || "normal"
+  )
+  const [density, setDensity] = useState<string>(
+    (workspace?.settings?.appearance?.density as string) || "comfortable"
+  )
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    if (workspace?.settings?.appearance) {
+      setFontSize(
+        (workspace.settings.appearance.font_size as string) || "normal"
+      )
+      setDensity(
+        (workspace.settings.appearance.density as string) || "comfortable"
+      )
+    }
+  }, [workspace])
+
+  const themeOptions = [
+    {
+      id: "light" as const,
+      label: "Light",
+      icon: Sun,
+    },
+    {
+      id: "dark" as const,
+      label: "Dark",
+      icon: Moon,
+    },
+    {
+      id: "system" as const,
+      label: "System",
+      icon: Monitor,
+    },
+  ]
+
+  const handleSave = async () => {
+    if (!workspace || !onUpdateWorkspace || !canUpdate || isSaving) return
+
+    try {
+      setIsSaving(true)
+      setIsSaved(false)
+
+      const updatedSettings: WorkspaceSettings = {
+        ...(workspace.settings || {}),
+        appearance: {
+          ...(workspace.settings?.appearance || {}),
+          theme,
+          font_size: fontSize as "compact" | "normal" | "large",
+          density: density as "comfortable" | "compact",
+        },
+      }
+
+      await onUpdateWorkspace(workspace.id, {
+        settings: updatedSettings,
+      })
+
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 3000)
+    } catch (err) {
+      toast.error("Failed to save appearance settings", {
+        description: (err as Error).message || "Could not update appearance preferences.",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
-      {/* Top Header Bar */}
-      <div className="sticky top-0 z-20 flex min-h-12 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 px-4 backdrop-blur-xs">
-        <div className="flex items-center gap-2">
+      {/* Top Action Bar */}
+      <div className="sticky top-0 z-20 flex min-h-11 shrink-0 items-center justify-between border-b border-border bg-sidebar/30 p-1 px-3 backdrop-blur-xs">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <PageSidebarTrigger
             className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
             title="Toggle sidebar"
           />
-          <h2 className="text-sm font-semibold text-foreground">Appearance</h2>
+          <Separator orientation="vertical" />
+          <Palette className="size-3.5 text-primary" />
+          <span className="font-semibold text-xs text-foreground">Appearance</span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+            Theme & Display
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!canUpdate ? (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <Lock className="size-3" />
+              <span>Read-only</span>
+            </Badge>
+          ) : onUpdateWorkspace ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : isSaved ? (
+                <Check className="size-3.5 text-emerald-500" />
+              ) : (
+                <Save className="size-3.5" />
+              )}
+              <span>{isSaving ? "Saving..." : isSaved ? "Saved" : "Save Changes"}</span>
+            </Button>
+          ) : (
+            <span className="capitalize rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {theme} mode
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Main Body (Scrollable) */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          {/* Card: Theme Mode */}
-          <Card className="p-5 flex flex-col gap-4 shadow-2xs border-border/80">
-            <div className="flex items-center justify-between border-b border-border/50 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Palette className="size-4" />
+      {/* Main Full-Width Body with Row-by-Row Layout */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="w-full p-4 sm:p-6 pb-16">
+          <div className="flex w-full flex-col gap-6">
+            {/* Appearance Preferences Card */}
+            <Card className="p-5 flex flex-col gap-0 shadow-2xs border-border/80">
+              <div className="flex items-center justify-between border-b border-border/50 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Palette className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Interface Appearance</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Tailor color modes, typography scale, and layout density.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold">Theme Preference</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Select how Kaizen appears across your device.
+              </div>
+
+              {/* Row 1: Theme Mode */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5 border-b border-border/40">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <span className="text-xs font-semibold text-foreground">
+                    Theme Mode
+                  </span>
+                  <p className="text-[11px] text-muted-foreground">
+                    Select between light and dark aesthetics or sync with your system OS.
                   </p>
                 </div>
-              </div>
-              <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                Press <kbd className="font-semibold">d</kbd> to cycle
-              </span>
-            </div>
+                <div className="w-full sm:max-w-md shrink-0">
+                  <div className="grid grid-cols-3 gap-2">
+                    {themeOptions.map((opt) => {
+                      const Icon = opt.icon
+                      const isSelected = theme === opt.id
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <Button
-                type="button"
-                variant={theme === "light" ? "default" : "outline"}
-                onClick={() => setTheme("light")}
-                className="flex items-center justify-between h-11 px-3.5 text-xs font-medium cursor-pointer shadow-none"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Sun className="size-4" />
-                  <span>Light</span>
+                      return (
+                        <Button
+                          key={opt.id}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setTheme(opt.id)
+                          }}
+                          className={cn(
+                            "h-9 gap-2 text-xs font-medium cursor-pointer shadow-none justify-center",
+                            !isSelected && "bg-background hover:bg-muted/50"
+                          )}
+                        >
+                          <Icon className="size-3.5" />
+                          <span>{opt.label}</span>
+                          {isSelected && <Check className="size-3 ml-0.5" />}
+                        </Button>
+                      )
+                    })}
+                  </div>
                 </div>
-                {theme === "light" && <Check className="size-3.5" />}
-              </Button>
+              </div>
 
-              <Button
-                type="button"
-                variant={theme === "dark" ? "default" : "outline"}
-                onClick={() => setTheme("dark")}
-                className="flex items-center justify-between h-11 px-3.5 text-xs font-medium cursor-pointer shadow-none"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Moon className="size-4" />
-                  <span>Dark</span>
+              {/* Row 2: Font Size Scale */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5 border-b border-border/40">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <div className="flex items-center gap-1.5">
+                    <Type className="size-3 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Font Size Scale
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Scale interface typography for enhanced readability.
+                  </p>
                 </div>
-                {theme === "dark" && <Check className="size-3.5" />}
-              </Button>
-
-              <Button
-                type="button"
-                variant={theme === "system" ? "default" : "outline"}
-                onClick={() => setTheme("system")}
-                className="flex items-center justify-between h-11 px-3.5 text-xs font-medium cursor-pointer shadow-none"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Monitor className="size-4" />
-                  <span>System</span>
+                <div className="w-full sm:max-w-md shrink-0">
+                  <Select
+                    value={fontSize}
+                    onValueChange={(val) => {
+                      if (val) setFontSize(val)
+                    }}
+                    disabled={!canUpdate || isSaving}
+                  >
+                    <SelectTrigger className="w-full text-xs bg-background">
+                      <SelectValue placeholder="Select font scale" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_SIZE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {theme === "system" && <Check className="size-3.5" />}
-              </Button>
-            </div>
-          </Card>
+              </div>
 
-          {/* Card: Keyboard Shortcuts */}
-          <Card className="p-5 flex flex-col gap-3 shadow-2xs border-border/80">
-            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
-              <div className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <Keyboard className="size-4" />
+              {/* Row 3: Interface Density */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4.5">
+                <div className="flex flex-col gap-0.5 sm:max-w-md">
+                  <div className="flex items-center gap-1.5">
+                    <LayoutTemplate className="size-3 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Layout Density
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Adjust compact spacing across tables, lists, and task columns.
+                  </p>
+                </div>
+                <div className="w-full sm:max-w-md shrink-0">
+                  <Select
+                    value={density}
+                    onValueChange={(val) => {
+                      if (val) setDensity(val)
+                    }}
+                    disabled={!canUpdate || isSaving}
+                  >
+                    <SelectTrigger className="w-full text-xs bg-background">
+                      <SelectValue placeholder="Select layout density" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DENSITY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold">Keyboard Shortcuts</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Global navigation and shortcut hotkeys.
-                </p>
-              </div>
-            </div>
-
-            <div className="divide-y divide-border/50 text-xs pt-1">
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Command Search Palette</span>
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                  Cmd + K / Ctrl + K
-                </kbd>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Toggle Theme (Light / Dark)</span>
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                  d
-                </kbd>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Jump to Zenbox</span>
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                  g then z
-                </kbd>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Dismiss Modal / Dialog</span>
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                  Esc
-                </kbd>
-              </div>
-            </div>
-          </Card>
-
-          {/* Card: User Account Info */}
-          <Card className="p-5 flex flex-col gap-3 shadow-2xs border-border/80">
-            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
-              <div className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <User className="size-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold">Account Profile</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Your authenticated session credentials.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1">
-              <div>
-                <p className="font-medium text-foreground">
-                  {user?.fullName || user?.username || "Authenticated User"}
-                </p>
-                <p className="text-muted-foreground mt-0.5">
-                  {user?.primaryEmailAddress?.emailAddress || "user@kaizen.app"}
-                </p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                Clerk Authenticated
-              </Badge>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
+export default AppearanceSettingsPanel

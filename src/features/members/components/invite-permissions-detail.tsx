@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react"
 import {
-  Shield,
   Copy,
   Check,
   Link2,
@@ -111,6 +110,8 @@ export function InvitePermissionsDetail({
   const [isSaving, setIsSaving] = useState(false)
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isRevoking, setIsRevoking] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
   const [referenceTime] = useState(() => Date.now())
 
   const initializedInviteIdRef = useRef<number | null>(null)
@@ -239,6 +240,34 @@ export function InvitePermissionsDetail({
     }
   }
 
+  const handleRevokeInvite = async () => {
+    if (!onRevokeInvite || isRevoking) return
+    try {
+      setIsRevoking(true)
+      await onRevokeInvite(invite.id)
+    } catch (err) {
+      toast.error("Failed to revoke invite", {
+        description: (err as Error).message || "Could not revoke invite code.",
+      })
+    } finally {
+      setIsRevoking(false)
+    }
+  }
+
+  const handleRestoreInvite = async () => {
+    if (!onRestoreInvite || isRestoring) return
+    try {
+      setIsRestoring(true)
+      await onRestoreInvite(invite.id)
+    } catch (err) {
+      toast.error("Failed to restore invite", {
+        description: (err as Error).message || "Could not restore invite code.",
+      })
+    } finally {
+      setIsRestoring(false)
+    }
+  }
+
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(invite.code)
@@ -317,19 +346,10 @@ export function InvitePermissionsDetail({
 
         {/* Realtime Save Status & Quick Actions */}
         <div className="flex items-center gap-2">
-          {!isInactive && canUpdate && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {isSaving || isUpdating ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin text-primary" />
-                  <span className="text-[11px] text-muted-foreground">Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-[11px] text-muted-foreground hidden sm:inline">Saved</span>
-                </>
-              )}
+          {(isSaving || isUpdating) && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <span className="text-[11px] text-muted-foreground hidden sm:inline">Saving...</span>
             </div>
           )}
 
@@ -348,6 +368,67 @@ export function InvitePermissionsDetail({
             )}
             <span className="hidden sm:inline">Copy Code</span>
           </Button>
+
+          {!isRevoked ? (
+            canDelete && onRevokeInvite && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRevokeInvite}
+                disabled={isRevoking || isSaving || isUpdating}
+                className="h-8 cursor-pointer gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title="Revoke invite code"
+              >
+                {isRevoking ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                <span>Revoke</span>
+              </Button>
+            )
+          ) : (
+            <>
+              {canUpdate && onRestoreInvite && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRestoreInvite}
+                  disabled={isRestoring || isSaving || isUpdating}
+                  className="h-8 cursor-pointer gap-1.5 text-xs font-medium"
+                  title="Restore invite code"
+                >
+                  {isRestoring ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="size-3.5" />
+                  )}
+                  <span>Restore</span>
+                </Button>
+              )}
+
+              {canDelete && onDeleteInvite && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsConfirmDeleteOpen(true)}
+                  disabled={isDeleting || isSaving || isUpdating}
+                  className="h-8 cursor-pointer gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  title="Permanently delete invite code"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                  <span>Delete</span>
+                </Button>
+              )}
+            </>
+          )}
 
           <Button
             type="button"
@@ -369,32 +450,19 @@ export function InvitePermissionsDetail({
 
       {/* Main 2-Column Responsive Body (Scrollable) */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl p-4 sm:p-6 pb-16">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="w-full p-4 sm:p-6 pb-16">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
             {/* Left Column: RBAC Matrix Setup */}
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="size-4 text-primary" />
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Invite Code Permissions Matrix
-                  </h2>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Any collaborator joining via this invite code will receive the permissions configured below. All changes auto-save in realtime.
-              </p>
-
+            <div className="flex min-w-0 flex-col">
               <RbacMatrixTable
                 permissions={permissions}
                 onChange={handlePermissionsChange}
                 disabled={isInactive || !canUpdate || isSaving || isUpdating}
                 readOnlyReason={readOnlyReason}
-                className="mt-1"
               />
             </div>
 
-            {/* Right Column: Code Info, Shadcn Settings, and Actions */}
+            {/* Right Column: Code Info and Settings */}
             <div className="flex flex-col gap-4">
               {/* Code Info Card */}
               <div className="flex flex-col gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
@@ -479,56 +547,6 @@ export function InvitePermissionsDetail({
                     {invite.use_count} / {maxUses === 0 ? "∞" : maxUses}
                   </strong>
                 </div>
-              </div>
-
-              {/* Actions Card */}
-              <div className="flex flex-col gap-2.5 rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
-                <h3 className="text-xs font-semibold text-foreground">
-                  Invite Code Status
-                </h3>
-
-                {!isRevoked ? (
-                  canDelete && onRevokeInvite && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onRevokeInvite(invite.id)}
-                      className="w-full cursor-pointer justify-start gap-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                      <span>Revoke Invite Code</span>
-                    </Button>
-                  )
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {canUpdate && onRestoreInvite && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onRestoreInvite(invite.id)}
-                        className="w-full cursor-pointer justify-start gap-2 text-xs font-medium"
-                      >
-                        <RotateCcw className="size-3.5" />
-                        <span>Restore Invite Code</span>
-                      </Button>
-                    )}
-
-                    {canDelete && onDeleteInvite && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setIsConfirmDeleteOpen(true)}
-                        className="w-full cursor-pointer justify-start gap-2 text-xs font-medium"
-                      >
-                        <Trash2 className="size-3.5" />
-                        <span>Delete Permanently</span>
-                      </Button>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>

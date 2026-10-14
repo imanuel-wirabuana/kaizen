@@ -25,7 +25,9 @@ import {
   subscribeToZenChanges,
 } from "@/features/inbox/services/zen-service"
 import { zenKeys } from "@/features/inbox/services/zen-keys"
+import { boardKeys } from "@/features/boards/services/board-keys"
 import type { Zen, UpdateZenInput } from "@/types/zen"
+import type { TaskWithZen } from "@/types/task"
 
 const EMPTY_ZENS: Zen[] = []
 
@@ -205,6 +207,14 @@ export function useInboxZens() {
         zenKeys.list(workspaceId),
         (old) => old?.map((item) => (item.id === updated.id ? updated : item)) ?? [updated]
       )
+      // Sync update with board tasks cache immediately
+      queryClient.setQueriesData<TaskWithZen[]>(
+        { queryKey: [...boardKeys.all, "tasks"] },
+        (old) =>
+          old?.map((item) =>
+            item.zen_id === updated.id ? { ...item, zen: updated } : item
+          ) ?? []
+      )
       void queryClient.invalidateQueries({ queryKey: zenKeys.list(workspaceId) })
       upsertZen(updated)
     },
@@ -230,6 +240,11 @@ export function useInboxZens() {
         queryClient.setQueryData<Zen[]>(
           zenKeys.list(workspaceId),
           (old) => old?.map((item) => (item.id === id ? archivedItem : item)) ?? []
+        )
+        // Remove archived zen from board tasks cache
+        queryClient.setQueriesData<TaskWithZen[]>(
+          { queryKey: [...boardKeys.all, "tasks"] },
+          (old) => old?.filter((item) => item.zen_id !== id) ?? []
         )
         upsertZen(archivedItem)
         toast.success("Zen item archived", {
@@ -258,6 +273,9 @@ export function useInboxZens() {
           zenKeys.list(workspaceId),
           (old) => old?.map((item) => (item.id === id ? restoredItem : item)) ?? []
         )
+        void queryClient.invalidateQueries({
+          queryKey: [...boardKeys.all, "tasks"],
+        })
         upsertZen(restoredItem)
         toast.success("Zen item restored", {
           description: `"${existing.name}" returned to active Zenbox.`,
@@ -286,6 +304,11 @@ export function useInboxZens() {
       queryClient.setQueryData<Zen[]>(
         zenKeys.list(workspaceId),
         (old) => old?.filter((item) => item.id !== id) ?? []
+      )
+      // Remove deleted zen from board tasks cache
+      queryClient.setQueriesData<TaskWithZen[]>(
+        { queryKey: [...boardKeys.all, "tasks"] },
+        (old) => old?.filter((item) => item.zen_id !== id) ?? []
       )
       void queryClient.invalidateQueries({ queryKey: zenKeys.list(workspaceId) })
       removeZen(id)
@@ -325,6 +348,10 @@ export function useInboxZens() {
         const item = zens.find((z) => z.id === id)
         if (item) upsertZen({ ...item, archived_at: nowIso })
       }
+      queryClient.setQueriesData<TaskWithZen[]>(
+        { queryKey: [...boardKeys.all, "tasks"] },
+        (old) => old?.filter((item) => !ids.includes(item.zen_id)) ?? []
+      )
       clearBatchSelect()
       toast.success("Items archived", {
         description: `${ids.length} ${ids.length === 1 ? "item" : "items"} moved to archive.`,
@@ -352,6 +379,9 @@ export function useInboxZens() {
           ) ?? []
       )
       void queryClient.invalidateQueries({ queryKey: zenKeys.list(workspaceId) })
+      void queryClient.invalidateQueries({
+        queryKey: [...boardKeys.all, "tasks"],
+      })
       for (const id of ids) {
         const item = zens.find((z) => z.id === id)
         if (item) upsertZen({ ...item, archived_at: null })
@@ -378,6 +408,10 @@ export function useInboxZens() {
       queryClient.setQueryData<Zen[]>(
         zenKeys.list(workspaceId),
         (old) => old?.filter((item) => !ids.includes(item.id)) ?? []
+      )
+      queryClient.setQueriesData<TaskWithZen[]>(
+        { queryKey: [...boardKeys.all, "tasks"] },
+        (old) => old?.filter((item) => !ids.includes(item.zen_id)) ?? []
       )
       void queryClient.invalidateQueries({ queryKey: zenKeys.list(workspaceId) })
       for (const id of ids) {
@@ -408,6 +442,10 @@ export function useInboxZens() {
       queryClient.setQueryData<Zen[]>(
         zenKeys.list(workspaceId),
         (old) => old?.filter((item) => !ids.includes(item.id)) ?? []
+      )
+      queryClient.setQueriesData<TaskWithZen[]>(
+        { queryKey: [...boardKeys.all, "tasks"] },
+        (old) => old?.filter((item) => !ids.includes(item.zen_id)) ?? []
       )
       void queryClient.invalidateQueries({ queryKey: zenKeys.list(workspaceId) })
       for (const id of ids) {
